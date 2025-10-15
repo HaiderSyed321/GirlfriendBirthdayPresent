@@ -512,22 +512,24 @@ class Game:
 		for obj in tmx_map.get_layer_by_name('Monsters'):
 			MonsterPatchSprite((obj.x, obj.y), obj.image, (self.all_sprites, self.monster_sprites), obj.properties['biome'], obj.properties['monsters'], obj.properties['level'])
 
-		# entities 
+		# entities
+		created_player = False
 		for obj in tmx_map.get_layer_by_name('Entities'):
 			if obj.name == 'Player':
-				if obj.properties['pos'] == player_start_pos:
+				# Support special 'any' spawn (used by load_game) → use the first player marker
+				if player_start_pos == 'any' and not created_player or obj.properties['pos'] == player_start_pos:
 					self.player = Player(
-						pos = (obj.x, obj.y), 
-						frames = self.overworld_frames['characters']['player'], 
+						pos = (obj.x, obj.y),
+						frames = self.overworld_frames['characters']['player'],
 						groups = self.all_sprites,
-						facing_direction = obj.properties.get('direction', 'down'), 
+						facing_direction = obj.properties.get('direction', 'down'),
 						collision_sprites = self.collision_sprites)
-					# Add reference to game for party ending logic
 					self.player.game = self
+					created_player = True
 			else:
 				Character(
-					pos = (obj.x, obj.y), 
-					frames = self.overworld_frames['characters'][obj.properties['graphic']], 
+					pos = (obj.x, obj.y),
+					frames = self.overworld_frames['characters'][obj.properties['graphic']],
 					groups = (self.all_sprites, self.collision_sprites, self.character_sprites),
 					facing_direction = obj.properties.get('direction', 'down'),  # Safe default
 					character_data = TRAINER_DATA[obj.properties['character_id']],
@@ -537,6 +539,16 @@ class Game:
 					radius = obj.properties.get('radius', 0),  # Safe default
 					nurse = obj.properties['character_id'] == 'Nurse',
 					notice_sound = self.audio['notice'])
+
+		# Fallback: ensure a player exists (for maps lacking markers)
+		if not created_player:
+			self.player = Player(
+				pos = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2),
+				frames = self.overworld_frames['characters']['player'],
+				groups = self.all_sprites,
+				facing_direction = 'down',
+				collision_sprites = self.collision_sprites)
+			self.player.game = self
 		
 		# Spawn collectibles based on map and quest status
 		self.spawn_collectibles()
@@ -908,10 +920,11 @@ class Game:
 			# Re-setup current map to re-place entities and player
 			map_key = save_data.get('map', self.current_map)
 			self.setup(self.tmx_maps[map_key], player_start_pos = 'any')
-			# Move player to saved position
+			# Move player to saved position (with clamping)
 			px, py = save_data.get('player_pos', [self.player.rect.centerx, self.player.rect.centery])
-			self.player.rect.center = (px, py)
+			self.player.rect.center = (int(px), int(py))
 			self.player.hitbox.center = self.player.rect.center
+			self.player.unblock()
 			self.save_message = 'Loaded'
 			self.save_message_timer.activate()
 		except FileNotFoundError:
