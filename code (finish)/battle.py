@@ -29,12 +29,10 @@ class Battle:
 		self.battle_sprites   = BattleSprites()
 		self.player_sprites   = pygame.sprite.Group()
 		self.opponent_sprites = pygame.sprite.Group()
-		# ensure indexes menu starts in general mode so UI isn't blank
-		self.selection_mode = 'general'
 
 		# control
 		self.current_monster = None
-		self.selection_mode  = 'general'
+		self.selection_mode  = None
 		self.selected_attack = None
 		self.selection_side  = 'player'
 		self.indexes = {
@@ -44,18 +42,20 @@ class Battle:
 			'switch' : 0,
 			'target' : 0,
 		}
+		# ensure attribute exists before any input logic reads it
+		self.available_monsters = {}
 
 		self.setup()
 
 	def setup(self):
-		# Create ONLY one active monster per side (1v1 start),
-		# keep remaining monsters in self.monster_data for switches/replacements.
+		# Spawn only the first monster (index 0) on each side for 1v1 battles
 		for entity, monsters in self.monster_data.items():
-			# find the first index deterministically
-			if not monsters:
-				continue
-			first_index = sorted(monsters.keys())[0]
-			self.create_monster(monsters[first_index], first_index, 0, entity)
+			if 0 in monsters:
+				self.create_monster(monsters[0], 0, 0, entity)
+
+			# remove opponent monster data (only for the ones spawned)
+		for i in range(len(self.opponent_sprites)):
+			del self.monster_data['opponent'][i]
 	def create_monster(self, monster, index, pos_index, entity):
 		monster.paused = False
 		frames = self.monster_frames['monsters'][monster.name]
@@ -79,29 +79,26 @@ class Battle:
 		MonsterLevelSprite(entity, level_pos, monster_sprite, self.battle_sprites, self.fonts['small'])
 		MonsterStatsSprite(monster_sprite.rect.midbottom + vector(0,20), monster_sprite, (150,48), self.battle_sprites, self.fonts['small'])
 
-    def input(self, keys_just_pressed):
-        # Ignore input until a monster is active to take a turn
-        if not self.selection_mode or not self.current_monster:
-            return
-        if self.selection_mode:
-			# Determine menu limiter based on mode
-			if self.selection_mode == 'general':
-				limiter = len(BATTLE_CHOICES['full'])
-			elif self.selection_mode == 'attacks' and self.current_monster:
-				abilities = self.current_monster.monster.get_abilities(all = False) or []
-				limiter = max(1, len(abilities))
-			elif self.selection_mode == 'switch' and self.current_monster:
-				# Compute available monsters fresh each frame
-				active_monsters = [(s.index, s.monster) for s in self.player_sprites]
-				available_dict = {idx: mon for idx, mon in self.monster_data['player'].items() if (idx, mon) not in active_monsters and mon.health > 0}
-				self.available_monsters = available_dict
-				if len(available_dict) == 0:
-					return
-				limiter = len(available_dict)
-			elif self.selection_mode == 'target':
-				limiter = len(self.opponent_sprites) if self.selection_side == 'opponent' else len(self.player_sprites)
-			else:
-				limiter = 1
+	def input(self, keys_just_pressed):
+		if self.selection_mode and self.current_monster:
+			match self.selection_mode:
+				case 'general': limiter = len(BATTLE_CHOICES['full'])
+				case 'attacks':
+					abilities = self.current_monster.monster.get_abilities(all = False) or []
+					limiter = max(1, len(abilities))
+				case 'switch': 
+					# Recompute available monsters here so input logic is self-contained
+					active_monsters = [(monster_sprite.index, monster_sprite.monster) for monster_sprite in self.player_sprites]
+					available = {index: monster for index, monster in self.monster_data['player'].items() if (index, monster) not in active_monsters and monster.health > 0}
+					self.available_monsters = available
+					if not available:
+						# Bounce back to general menu if there is nothing to switch to
+						self.selection_mode = 'general'
+						self.indexes['switch'] = 0
+						limiter = len(BATTLE_CHOICES['full'])
+					else:
+						limiter = max(1, len(available))
+				case 'target': limiter = len(self.opponent_sprites) if self.selection_side == 'opponent' else len(self.player_sprites)
 
 			if pygame.K_DOWN in keys_just_pressed:
 				self.indexes[self.selection_mode] = (self.indexes[self.selection_mode] + 1) % limiter
@@ -109,17 +106,21 @@ class Battle:
 				self.indexes[self.selection_mode] = (self.indexes[self.selection_mode] - 1) % limiter
 			if pygame.K_SPACE in keys_just_pressed:
 				
-				if self.selection_mode == 'switch' and self.current_monster:
-					available = getattr(self, 'available_monsters', {})
+				if self.selection_mode == 'switch':
+					# Ensure availability calculation is up to date
+					active_monsters = [(monster_sprite.index, monster_sprite.monster) for monster_sprite in self.player_sprites]
+					available = {index: monster for index, monster in self.monster_data['player'].items() if (index, monster) not in active_monsters and monster.health > 0}
+					self.available_monsters = available
 					if not available:
-						return  # No monsters to switch
-					index, new_monster = list(available.items())[self.indexes['switch'] % len(available)]
-					pos_index = self.current_monster.pos_index
+						# Nothing to switch to; return to general selection
+						self.selection_mode = 'general'
+						self.indexes['switch'] = 0
+						return
+					index, new_monster = list(available.items())[self.indexes['switch']]
 					self.current_monster.kill()
-					self.create_monster(new_monster, index, pos_index, 'player')
-					self.selection_mode = 'general'
+					self.create_monster(new_monster, index, self.current_monster.pos_index, 'player')
+					self.selection_mode = None
 					self.update_all_monsters('resume')
-					return
 
 				if self.selection_mode == 'target':
 					sprite_group = self.opponent_sprites if self.selection_side == 'opponent' else self.player_sprites
@@ -130,7 +131,7 @@ class Battle:
 					idx = self.indexes['target'] % max(1, len(keys_list))
 					monster_sprite = sprites[keys_list[idx]]
 
-					if self.selected_attack and self.current_monster:
+					if self.selected_attack:
 						self.current_monster.activate_attack(monster_sprite, self.selected_attack)
 						self.selected_attack, self.current_monster, self.selection_mode = None, None, None
 					else:
@@ -278,10 +279,17 @@ class Battle:
 			for monster in self. monster_data['player'].values():
 				monster.initiative = 0
 
-		# player has been defeated 
-		if len(self.player_sprites) == 0:
-			pygame.quit()
-			exit()
+		# player defeated only if no healthy bench remains
+		if len(self.player_sprites) == 0 and not self.battle_over:
+			active_monsters = []
+			available_bench = [
+				(index, monster) for index, monster in self.monster_data['player'].items()
+				if monster.health > 0 and (index, monster) not in active_monsters
+			]
+			if not available_bench:
+				self.battle_over = True
+				# End battle without marking NPC defeated
+				self.end_battle(None)
 
 
 	# ui 
@@ -393,10 +401,6 @@ class Battle:
 		# Only tick opponent delay if a current monster exists
 		if self.current_monster:
 			self.update_timers()
-		else:
-			# keep UI visible on general menu when awaiting next turn
-			if self.selection_mode is None:
-				self.selection_mode = 'general'
 		self.battle_sprites.update(dt)
 		self.check_active()
 

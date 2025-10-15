@@ -69,13 +69,13 @@ class Game:
 
 		# player monsters 
 		self.player_monsters = {
-			0: Monster('Ivieron', 32),
-			1: Monster('Atrox', 15),
-			2: Monster('Cindrill', 16),
-			3: Monster('Atrox', 10),
-			4: Monster('Sparchu', 11),
-			5: Monster('Gulfin', 9),
-			6: Monster('Jacana', 10),
+			0: Monster('Ivieron', 50),
+			1: Monster('Atrox', 42),
+			2: Monster('Cindrill', 46),
+			3: Monster('Atrox', 40),
+			4: Monster('Sparchu', 44),
+			5: Monster('Gulfin', 43),
+			6: Monster('Jacana', 41),
 		}
 		for monster in self.player_monsters.values():
 			monster.xp += randint(0,monster.level * 100)
@@ -113,6 +113,8 @@ class Game:
 		self.battle = None
 		self.quiz = None
 		self.evolution = None
+		self.show_final_message = False
+		self.show_final_message = False
 
 
 	def import_assets(self):
@@ -629,6 +631,11 @@ class Game:
 
 	def end_dialog(self, character, trigger_quiz=False):
 		self.dialog_tree = None
+		# Final party ending: after talking to Haider at WATER with all items
+		if hasattr(character, 'character_data') and character.character_data.get('is_party_npc', False) and self.current_map == 'water' and self.has_all_party_items():
+			self.show_final_message = True
+			self.player.block()
+			return
 		
 		# Birthday Game: Check if this is the birthday note
 		if character.character_data.get('is_birthday_note', False):
@@ -662,17 +669,17 @@ class Game:
 					monster.defending = False
 					monster.paused = False
 			
-			# Pass full rosters; Battle will instantiate only the first active on each side (1v1 start)
+			# Player uses full roster; NPCs limited to first two for 1v1 cycling
 			if hasattr(character, 'monsters') and character.monsters:
-				player_first = self.player_monsters
-				opponent_first = character.monsters
+				player_roster = self.player_monsters
+				opponent_first = {k:v for k,v in list(character.monsters.items())[:2]}
 			else:
 				# No monsters - shouldn't happen, but handle it gracefully
 				self.player.unblock()
 				return
 			
 			self.transition_target = Battle(
-				player_monsters = player_first, 
+				player_monsters = player_roster, 
 				opponent_monsters = opponent_first, 
 				monster_frames = self.monster_frames, 
 				bg_surf = self.bg_frames[character.character_data['biome']], 
@@ -682,7 +689,12 @@ class Game:
 				sounds = self.audio)
 			self.tint_mode = 'tint'
 		else:
-			self.player.unblock()
+			# If speaking with final party NPC (Haider) at water and all items collected, show final message
+			if hasattr(character, 'character_data') and character.character_data.get('is_party_npc', False) and self.current_map == 'water' and self.has_all_party_items():
+				self.show_final_message = True
+				self.player.block()
+			else:
+				self.player.unblock()
 			self.check_evolution()
 
 	# transition system
@@ -725,6 +737,13 @@ class Game:
 			self.audio['battle'].stop()
 			self.transition_target = 'level'
 			self.tint_mode = 'tint'
+			# Auto-heal player's monsters after every battle
+			for monster in self.player_monsters.values():
+				monster.health = monster.get_stat('max_health')
+				monster.energy = monster.get_stat('max_energy')
+				monster.initiative = 0
+				monster.defending = False
+				monster.paused = False
 			
 			if character and hasattr(character, 'character_data'):
 				# Check if this character has quiz data (question and options fields)
@@ -760,6 +779,51 @@ class Game:
 			self.player.unblock()
 			if hasattr(self, 'audio') and 'overworld' in self.audio:
 				self.audio['overworld'].play(-1)
+		
+	def draw_final_message(self):
+		"""Show a loving final message after speaking with Haider at the WATER arena."""
+		if not self.show_final_message:
+			return
+		# Semi-transparent overlay
+		overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
+		overlay.fill((0, 0, 0))
+		overlay.set_alpha(200)
+		self.display_surface.blit(overlay, (0, 0))
+		# Message box
+		box_width, box_height = 900, 500
+		box_x = (WINDOW_WIDTH - box_width) // 2
+		box_y = (WINDOW_HEIGHT - box_height) // 2
+		message_box = pygame.Surface((box_width, box_height))
+		message_box.fill(COLORS['white'])
+		pygame.draw.rect(message_box, COLORS['gold'], message_box.get_rect(), 5)
+		# Title
+		title = self.fonts['bold'].render("THANK YOU FOR PLAYING!", False, COLORS['gold'])
+		title_rect = title.get_rect(center = (box_width // 2, 40))
+		message_box.blit(title, title_rect)
+		# Paragraph
+		lines = [
+			"Eman, thank you for adventuring through this little world.",
+			"I hope you smiled, laughed, and felt loved along the way.",
+			"Happy 25th Birthday — you are amazing.",
+			"",
+			"Thank you for playing the Birthday Adventure.",
+			"I love you so much, always and forever. — Haider"
+		]
+		y = 100
+		for line in lines:
+			text = self.fonts['regular'].render(line, False, COLORS['black'])
+			text_rect = text.get_rect(center = (box_width // 2, y))
+			message_box.blit(text, text_rect)
+			y += 36
+		# Close hint
+		close = self.fonts['small'].render("Press SPACE to continue", False, COLORS['red'])
+		close_rect = close.get_rect(center = (box_width // 2, box_height - 40))
+		message_box.blit(close, close_rect)
+		self.display_surface.blit(message_box, (box_x, box_y))
+		# Input to dismiss
+		if pygame.K_SPACE in self.keys_just_pressed:
+			self.show_final_message = False
+			self.player.unblock()
 	
 	def start_quiz(self, character):
 		"""Start a quiz for birthday NPCs after battle"""
@@ -1034,6 +1098,8 @@ class Game:
 			if self.battle:      self.battle.update(dt, self.keys_just_pressed)
 			if self.quiz:        self.quiz.update(dt, self.keys_just_pressed)
 			if self.evolution:   self.evolution.update(dt)
+			# Final message overlay on top
+			self.draw_final_message()
 
 			# Birthday Game: Draw intro screen (on top of everything)
 			self.draw_intro_screen()
