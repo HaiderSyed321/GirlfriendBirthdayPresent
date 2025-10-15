@@ -80,14 +80,14 @@ class Battle:
 		MonsterStatsSprite(monster_sprite.rect.midbottom + vector(0,20), monster_sprite, (150,48), self.battle_sprites, self.fonts['small'])
 
 	def input(self, keys_just_pressed):
-		if self.selection_mode and self.current_monster:
+		if self.selection_mode:
 			# Determine menu limiter based on mode
 			if self.selection_mode == 'general':
 				limiter = len(BATTLE_CHOICES['full'])
-			elif self.selection_mode == 'attacks':
+			elif self.selection_mode == 'attacks' and self.current_monster:
 				abilities = self.current_monster.monster.get_abilities(all = False) or []
 				limiter = max(1, len(abilities))
-			elif self.selection_mode == 'switch':
+			elif self.selection_mode == 'switch' and self.current_monster:
 				# Compute available monsters fresh each frame
 				active_monsters = [(s.index, s.monster) for s in self.player_sprites]
 				available_dict = {idx: mon for idx, mon in self.monster_data['player'].items() if (idx, mon) not in active_monsters and mon.health > 0}
@@ -106,7 +106,7 @@ class Battle:
 				self.indexes[self.selection_mode] = (self.indexes[self.selection_mode] - 1) % limiter
 			if pygame.K_SPACE in keys_just_pressed:
 				
-				if self.selection_mode == 'switch':
+				if self.selection_mode == 'switch' and self.current_monster:
 					available = getattr(self, 'available_monsters', {})
 					if not available:
 						return  # No monsters to switch
