@@ -53,8 +53,7 @@ class Battle:
 			# remove opponent monster data 
 			for i in range(len(self.opponent_sprites)):
 				del self.monster_data['opponent'][i]
-
-		def create_monster(self, monster, index, pos_index, entity):
+	def create_monster(self, monster, index, pos_index, entity):
 		monster.paused = False
 		frames = self.monster_frames['monsters'][monster.name]
 		outline_frames = self.monster_frames['outlines'][monster.name]
@@ -73,7 +72,7 @@ class Battle:
 		# ui
 		name_pos = monster_sprite.rect.midleft + vector(16,-70) if entity == 'player' else monster_sprite.rect.midright + vector(-40,-70)
 		name_sprite = MonsterNameSprite(name_pos, monster_sprite, self.battle_sprites, self.fonts['regular'])
-		level_pos = name_sprite.rect.bottomleft if entity == 'player' else name_sprite.rect.bottomright 
+		level_pos = name_sprite.rect.bottomleft if entity == 'player' else name_sprite.rect.bottomright
 		MonsterLevelSprite(entity, level_pos, monster_sprite, self.battle_sprites, self.fonts['small'])
 		MonsterStatsSprite(monster_sprite.rect.midbottom + vector(0,20), monster_sprite, (150,48), self.battle_sprites, self.fonts['small'])
 
