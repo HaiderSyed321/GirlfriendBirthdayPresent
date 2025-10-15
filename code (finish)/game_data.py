@@ -20,6 +20,16 @@ TRAINER_DATA = {
 				"",
 				"Prepare for battle!"
 			],
+			'pre_quiz': [
+				"Ah shucks! You beat all my monsters!",
+				"You're really strong, Eman!",
+				"",
+				"But if you want the GIFT...",
+				"You must answer my quiz question correctly!",
+				"",
+				"Get it wrong and you'll have to battle me again!",
+				"Ready?"
+			],
 			'correct': [
 				"Excellent! You really know Haider!",
 				"Here's the GIFT for the party!",
@@ -30,12 +40,20 @@ TRAINER_DATA = {
 				"*** GIFT COLLECTED! ***"
 			],
 			'wrong': [
-				"Hmm, not quite right...",
-				"But I'll give you the GIFT anyway!",
-				"It's for Haider's surprise party after all!",
+				"Oops! That's not quite right...",
+				"You'll need to try again!",
 				"",
-				"(+20 minutes time penalty)",
-				"*** GIFT COLLECTED! ***"
+				"Battle me again and I'll give you",
+				"another chance at the quiz!",
+				"",
+				"(+20 minutes time penalty)"
+			],
+			'defeated': [
+				"You already got the GIFT from me!",
+				"Keep collecting the other items!",
+				"",
+				"Don't forget - you need all 3 items",
+				"to enter the ice area!"
 			]
 		},
 		'directions': ['left', 'down'],
@@ -59,6 +77,16 @@ TRAINER_DATA = {
 				"",
 				"Let's battle!"
 			],
+			'pre_quiz': [
+				"Wow! You defeated all my monsters!",
+				"Impressive skills, Eman!",
+				"",
+				"But before I give you the FLOWERS...",
+				"Answer my relationship quiz correctly!",
+				"",
+				"Get it wrong? You'll battle me again!",
+				"Here's your question..."
+			],
 			'correct': [
 				"Beautiful! The Woodsworth water fountain!",
 				"That's where your love story began...",
@@ -70,12 +98,20 @@ TRAINER_DATA = {
 				"*** FLOWERS COLLECTED! ***"
 			],
 			'wrong': [
-				"Not quite, but that's okay!",
+				"Hmm, that's not right!",
 				"It was at Woodsworth College water fountain!",
-				"Here are the FLOWERS anyway!",
 				"",
-				"(+20 minutes time penalty)",
-				"*** FLOWERS COLLECTED! ***"
+				"Come back and battle me again",
+				"for another shot at the quiz!",
+				"",
+				"(+20 minutes time penalty)"
+			],
+			'defeated': [
+				"You already have the FLOWERS!",
+				"Keep going, Eman!",
+				"",
+				"Collect all 3 items to unlock",
+				"the ice area party!"
 			]
 		},
 		'directions': ['left', 'right', 'up', 'down'],
@@ -85,7 +121,8 @@ TRAINER_DATA = {
 		'question': "Where did you and Haider first meet?",
 		'options': ['A) At a coffee shop', 'B) At Woodsworth College water fountain', 'C) At the library', 'D) At a party'],
 		'quiz_answer': 'B',
-		'item_reward': 'flowers',
+		# Flowers are now a progressive count; this NPC grants 5 flowers
+		'flowers_reward': 5,
 		'time_cost': 45,
 		'wrong_penalty': 20
 		},
@@ -99,6 +136,16 @@ TRAINER_DATA = {
 				"",
 				"Show me what you've got!"
 			],
+			'pre_quiz': [
+				"Oh no! You beat all my monsters!",
+				"You're too strong, Eman!",
+				"",
+				"But wait! To get the CAKE...",
+				"You must prove your love with a quiz!",
+				"",
+				"Wrong answer = battle me again!",
+				"Let's see what you know..."
+			],
 			'correct': [
 				"December 2019! Almost 6 years together!",
 				"What a beautiful journey you two have had!",
@@ -110,12 +157,20 @@ TRAINER_DATA = {
 				"*** CAKE COLLECTED! ***"
 			],
 			'wrong': [
-				"Hmm, let me check my notes...",
-				"Ah yes! December 2019!",
-				"Here's the CAKE anyway - it's your birthday!",
+				"Oops! Not quite right!",
+				"The correct answer is December 2019!",
 				"",
-				"(+20 minutes time penalty)",
-				"*** CAKE COLLECTED! ***"
+				"You'll need to battle me again",
+				"to try the quiz once more!",
+				"",
+				"(+20 minutes time penalty)"
+			],
+			'defeated': [
+				"You already got the CAKE!",
+				"How's your collection going?",
+				"",
+				"Remember - all 3 items needed",
+				"to access the ice area!"
 			]
 		},
 		'directions': ['right'],
@@ -358,10 +413,18 @@ TRAINER_DATA = {
 		'biome': 'forest'
 		},
 	'px': {
-		'monsters': {0: ('Friolera', 25), 1: ('Gulfin', 20), 2: ('Atrox',24), 3: ('Finiette', 30)},
+		# ARENA.TMX boss - awards Arena Badge upon defeat (plant arena)
+		'monsters': {0: ('Draem', 30), 1: ('Gulfin', 32), 2: ('Finiette', 34)},
 		'dialog': {
-			'default': ['I love trees', 'and fights'], 
-			'defeated': ['Good luck with the boss!']},
+			'default': [
+				"Welcome to the Arena of Nature!",
+				"Win to earn the ARENA BADGE!"
+			], 
+			'defeated': [
+				"You proved your strength! ARENA BADGE awarded!",
+				"The Water Arena awaits for the final celebration."
+			]},
+		'battle_reward': 'arena_badge',
 		'directions': ['right'],
 		'look_around': False,
 		'defeated': False,
@@ -418,14 +481,102 @@ TRAINER_DATA = {
 		'biome': 'ice'
 		},
 	'wx': {
-		'monsters': {0: ('Friolera', 25), 1: ('Gulfin', 20), 2: ('Draem',24), 3: ('Finiette', 30)},
+		# Final party NPC (Haider) in water.tmx
+		'monsters': {},
 		'dialog': {
-			'default': ['I hope you brought rations', 'This will be a long journey'], 
-			'defeated': ['Congratultion!']},
+			'default': [
+				"Eman! You're here at the water arena!",
+				"Do you have everything for the party?"
+			],
+			'perfect': [
+				"Eman! You made it with time to spare!",
+				"And you brought everything for our party!",
+				"",
+				"Welcome to your birthday party!",
+				"",
+				"Happy Birthday my love.",
+				"Congrats on beating all the challenges today.",
+				"",
+				"I'm so sorry I was not there to help you",
+				"celebrate your birthday this year,",
+				"but I hope you have an amazing day",
+				"and wonderful time.",
+				"",
+				"Happy 25th Birthday.",
+				"I love you more than you can ever imagine. <3",
+				"",
+				"*** PERFECT ENDING ***",
+				"Now let's celebrate by the water!"
+			],
+			'good': [
+				"Eman! You made it just in time!",
+				"That was close! But you got everything!",
+				"",
+				"Welcome to the party!",
+				"",
+				"Happy Birthday my love.",
+				"You did it! I knew you could!",
+				"",
+				"I'm so sorry I was not there to help you",
+				"celebrate your birthday this year,",
+				"but I hope you have an amazing day.",
+				"",
+				"Happy 25th Birthday.",
+				"I love you more than you can ever imagine. <3",
+				"",
+				"*** GOOD ENDING ***",
+				"The party is just beginning!"
+			],
+			'late': [
+				"Eman! You're here!",
+				"A bit late, but you got everything!",
+				"Fashionably late, as always!",
+				"",
+				"Welcome to the party!",
+				"",
+				"Happy Birthday my love.",
+				"",
+				"I'm so sorry I was not there to help you",
+				"celebrate your birthday this year,",
+				"but I hope you have an amazing day.",
+				"",
+				"Happy 25th Birthday.",
+				"I love you more than you can ever imagine. <3",
+				"",
+				"*** LATE ENDING ***",
+				"Better late than never! Let's party!"
+			],
+			'too_late': [
+				"Eman! There you are!",
+				"I was getting worried...",
+				"",
+				"But you got all the items! That's what matters!",
+				"The party already started by the water, but",
+				"I saved you a special spot! <3",
+				"",
+				"Happy Birthday my love.",
+				"",
+				"Happy 25th Birthday.",
+				"I love you more than you can ever imagine. <3",
+				"",
+				"*** TOO LATE ENDING ***",
+				"Let's celebrate together!"
+			],
+			'incomplete': [
+				"Eman! You found the final party!",
+				"But... you're missing some items!",
+				"",
+				"Bring: Gift, Cake, 15 Flowers, Fire Badge, Arena Badge",
+				"",
+				"Don't worry, the party will wait!",
+				"I'll be right here by the water! <3"
+			]
+		},
 		'directions': ['down'],
 		'look_around': False,
 		'defeated': False,
-		'biome': 'ice'
+		'biome': 'ice',
+		'is_party_npc': True
 		},
 	'f1': {
 		'monsters': {0: ('Cindrill', 15), 1: ('Jacana', 20), 2: ('Draem',24), 3: ('Atrox', 30)},
@@ -488,10 +639,18 @@ TRAINER_DATA = {
 		'biome': 'sand'
 		},
 	'fx': {
-		'monsters': {0: ('Cindrill', 15), 1: ('Jacana', 20), 2: ('Draem',24), 3: ('Atrox', 30)},
+		# FIRE.TMX boss - awards Fire Badge upon defeat
+		'monsters': {0: ('Cindrill', 32), 1: ('Atrox', 34), 2: ('Charmadillo', 36)},
 		'dialog': {
-			'default': ['Time to bring the heat', 'fight!'], 
-			'defeated': ['Congratultion!']},
+			'default': [
+				"Welcome to the Fire Arena!",
+				"Defeat me and earn the FIRE BADGE!"
+			], 
+			'defeated': [
+				"You bested the flames! FIRE BADGE awarded!",
+				"Head to the Arena next for the ARENA BADGE."
+			]},
+		'battle_reward': 'fire_badge',
 		'directions': ['down'],
 		'look_around': False,
 		'defeated': False,

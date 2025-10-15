@@ -18,28 +18,36 @@ class Quiz:
 		self.display_result = False
 		self.result_timer = Timer(2000, func=self.finish_quiz)
 		
+		# Prevent immediate input (wait for dialog key release)
+		self.input_delay_timer = Timer(300)  # 300ms delay before accepting input
+		self.input_delay_timer.activate()
+		
 	def input(self, keys_just_pressed):
-		if self.display_result:
+		# Don't process input during result display or input delay
+		if self.display_result or self.input_delay_timer.active:
 			return
 		
-		# Navigate options with arrow keys
+		# Navigate options with arrow keys AND WASD
 		if pygame.K_DOWN in keys_just_pressed or pygame.K_s in keys_just_pressed:
 			self.selected_option = min(3, self.selected_option + 1)
 		if pygame.K_UP in keys_just_pressed or pygame.K_w in keys_just_pressed:
 			self.selected_option = max(0, self.selected_option - 1)
 		
-		# Confirm answer with SPACE
-		if pygame.K_SPACE in keys_just_pressed:
-			self.submit_answer()
+		# Confirm answer with SPACE or RETURN
+		if pygame.K_SPACE in keys_just_pressed or pygame.K_RETURN in keys_just_pressed:
+			self.check_answer()
 	
-	def submit_answer(self):
+	def check_answer(self):
 		if self.answered:
 			return
 		
 		self.answered = True
 		
-		# Check if answer is correct
+		# Check if answer is correct (with safe defaults)
 		correct_answer = self.question_data.get('quiz_answer', 'B')  # Default to B if not specified
+		
+		# Make sure selected_option is within valid range
+		self.selected_option = max(0, min(3, self.selected_option))
 		player_answer = ['A', 'B', 'C', 'D'][self.selected_option]
 		
 		# Special case: 'ALL' means all answers are correct (joke question)
@@ -48,35 +56,45 @@ class Quiz:
 		else:
 			self.correct = (player_answer == correct_answer)
 		
-		# Apply time penalty if wrong
-		if not self.correct:
-			penalty = self.question_data.get('wrong_penalty', 20)
-			self.game.current_game_time += penalty
-		
-		# Add base time cost
+		# Add base time cost for attempting quiz
 		time_cost = self.question_data.get('time_cost', 45)
 		self.game.current_game_time += time_cost
 		
-		# Award item on completion (regardless of correct/wrong for item reward)
-		item_reward = self.question_data.get('item_reward')
-		if item_reward and item_reward in self.game.collected_items:
-			self.game.collected_items[item_reward] = True
+		# Only award item and mark as defeated if CORRECT
+		if self.correct:
+			# Flowers reward (adds to counter)
+			flowers_amount = self.question_data.get('flowers_reward')
+			if flowers_amount:
+				if hasattr(self.game, 'award_item'):
+					self.game.award_item('flowers_count', flowers_amount)
+			# Boolean item reward
+			item_reward = self.question_data.get('item_reward')
+			if item_reward:
+				if hasattr(self.game, 'award_item'):
+					self.game.award_item(item_reward)
+			# Mark character as defeated (quest complete)
+			if hasattr(self.character, 'character_data'):
+				self.character.character_data['defeated'] = True
+			# Play collection sound
+			if hasattr(self.game, 'audio') and 'notice' in self.game.audio:
+				self.game.audio['notice'].play()
+		else:
+			# Wrong answer - apply time penalty and keep defeated as False
+			penalty = self.question_data.get('wrong_penalty', 20)
+			if hasattr(self.game, 'current_game_time'):
+				self.game.current_game_time += penalty
+			# Explicitly keep defeated as False so they can battle again
+			if hasattr(self.character, 'character_data'):
+				self.character.character_data['defeated'] = False
 		
 		self.display_result = True
 		self.result_timer.activate()
 	
 	def finish_quiz(self):
-		# Update character's dialog to show correct/wrong message
-		if self.correct:
-			dialog_key = 'correct'
-		else:
-			dialog_key = 'wrong'
+		# defeated flag is already set in check_answer() based on correct/wrong
+		# Don't set it again here!
 		
-		# Update the character's dialog
-		if dialog_key in self.question_data.get('dialog', {}):
-			self.character.character_data['dialog']['default'] = self.question_data['dialog'][dialog_key]
-		
-		self.character.character_data['defeated'] = True
+		# Just end the quiz - defeated status is already correct
 		self.end_quiz(self.character)
 	
 	def draw_quiz(self, display_surface):
@@ -153,11 +171,17 @@ class Quiz:
 			quiz_box.blit(msg, (box_width // 2 - msg.get_width() // 2, y_offset))
 			y_offset += 40
 			
-			# Show item reward if any
-			item_reward = self.question_data.get('item_reward')
-			if item_reward:
-				item_msg = self.fonts['bold'].render(f"*** {item_reward.upper()} COLLECTED! ***", False, COLORS['gold'])
-				quiz_box.blit(item_msg, (box_width // 2 - item_msg.get_width() // 2, y_offset))
+			# Show item reward ONLY if actually collected (correct answer)
+			if self.correct:
+				flowers_amount = self.question_data.get('flowers_reward')
+				if flowers_amount:
+					item_msg = self.fonts['bold'].render(f"*** +{flowers_amount} FLOWERS! ***", False, COLORS['gold'])
+					quiz_box.blit(item_msg, (box_width // 2 - item_msg.get_width() // 2, y_offset))
+				else:
+					item_reward = self.question_data.get('item_reward')
+					if item_reward:
+						item_msg = self.fonts['bold'].render(f"*** {item_reward.upper()} COLLECTED! ***", False, COLORS['gold'])
+						quiz_box.blit(item_msg, (box_width // 2 - item_msg.get_width() // 2, y_offset))
 		
 		display_surface.blit(quiz_box, (box_x, box_y))
 	
@@ -184,6 +208,7 @@ class Quiz:
 	
 	def update(self, dt, keys_just_pressed):
 		self.result_timer.update()
+		self.input_delay_timer.update()
 		self.input(keys_just_pressed)
 		self.draw_quiz(pygame.display.get_surface())
 

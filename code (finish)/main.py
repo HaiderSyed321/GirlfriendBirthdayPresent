@@ -4,6 +4,7 @@ from birthday_data import BIRTHDAY_STORY_DATA
 from pytmx.util_pygame import load_pygame
 from os.path import join
 from random import randint
+import json
 
 from sprites import Sprite, AnimatedSprite, MonsterPatchSprite, BorderSprite, CollidableSprite, TransitionSprite, CollectibleSprite
 from entities import Player, Character
@@ -35,11 +36,18 @@ class Game:
 		self.game_over = False
 		self.game_won = False
 		
-		# Birthday Game: Item Collection System (3 items needed)
+		# Birthday Game: Item Collection System (5 items total)
+		# - gift: boolean
+		# - cake: boolean
+		# - flowers_count: integer progress toward 15
+		# - fire_badge: boolean (earned by defeating FIRE boss)
+		# - arena_badge: boolean (earned by defeating ARENA boss)
 		self.collected_items = {
 			'gift': False,
-			'flowers': False,
-			'cake': False
+			'cake': False,
+			'flowers_count': 0,
+			'fire_badge': False,
+			'arena_badge': False
 		}
 		
 		# Birthday Game: Quest System
@@ -50,6 +58,14 @@ class Game:
 		self.ice_area_unlocked = False  # Ice area locked until all items collected
 		self.show_ice_blocked_message = False  # Show message when player tries to enter ice
 		self.ice_blocked_timer = 0  # Timer for ice blocked message
+		
+		# Music control
+		self.music_muted = False
+
+		# Save system
+		self.save_file = join('savegame.json')
+		self.save_message = None
+		self.save_message_timer = Timer(1200)
 
 		# player monsters 
 		self.player_monsters = {
@@ -184,7 +200,7 @@ class Game:
 		self.display_surface.blit(remaining_surf, (WINDOW_WIDTH - 210, 60))
 		
 		# Items display (top-left)
-		items_panel = pygame.Surface((220, 100))
+		items_panel = pygame.Surface((240, 140))
 		items_panel.fill(COLORS['dark'])
 		items_panel.set_alpha(200)
 		self.display_surface.blit(items_panel, (20, 20))
@@ -192,24 +208,61 @@ class Game:
 		items_text = self.fonts['regular'].render("Items Collected:", False, COLORS['white'])
 		self.display_surface.blit(items_text, (30, 30))
 		
-		# Show collected items with checkmarks
+		# Show collected items with checkmarks / progress
 		y_offset = 55
-		for item_name, collected in self.collected_items.items():
-			if collected:
-				status = "[X]"
-				color = COLORS['green']
-			else:
-				status = "[ ]"
-				color = COLORS['white']
-			
-			item_display = f"{status} {item_name.title()}"
-			item_surf = self.fonts['small'].render(item_display, False, color)
-			self.display_surface.blit(item_surf, (30, y_offset))
-			y_offset += 20
+		# Gift
+		gift_collected = self.collected_items.get('gift', False)
+		gift_text = self.fonts['small'].render(f"{'[X]' if gift_collected else '[ ]'} Gift", False, COLORS['green'] if gift_collected else COLORS['white'])
+		self.display_surface.blit(gift_text, (30, y_offset)); y_offset += 20
+		# Cake
+		cake_collected = self.collected_items.get('cake', False)
+		cake_text = self.fonts['small'].render(f"{'[X]' if cake_collected else '[ ]'} Cake", False, COLORS['green'] if cake_collected else COLORS['white'])
+		self.display_surface.blit(cake_text, (30, y_offset)); y_offset += 20
+		# Flowers progress (15 required)
+		flowers_count = int(self.collected_items.get('flowers_count', 0))
+		flowers_done = flowers_count >= 15
+		flowers_text = self.fonts['small'].render(f"{'[X]' if flowers_done else '[ ]'} Flowers {flowers_count}/15", False, COLORS['green'] if flowers_done else COLORS['white'])
+		self.display_surface.blit(flowers_text, (30, y_offset)); y_offset += 20
+		# Fire badge
+		fire_badge = self.collected_items.get('fire_badge', False)
+		fire_text = self.fonts['small'].render(f"{'[X]' if fire_badge else '[ ]'} Fire Badge", False, COLORS['green'] if fire_badge else COLORS['white'])
+		self.display_surface.blit(fire_text, (30, y_offset)); y_offset += 20
+		# Arena badge
+		arena_badge = self.collected_items.get('arena_badge', False)
+		arena_text = self.fonts['small'].render(f"{'[X]' if arena_badge else '[ ]'} Arena Badge", False, COLORS['green'] if arena_badge else COLORS['white'])
+		self.display_surface.blit(arena_text, (30, y_offset)); y_offset += 20
 		
-		# Journal hint
+		# Journal hint - moved to bottom right to avoid overlap
 		journal_hint = self.fonts['small'].render("Press J for Journal", False, COLORS['white'])
-		self.display_surface.blit(journal_hint, (20, 85))
+		journal_hint_shadow = self.fonts['small'].render("Press J for Journal", False, COLORS['black'])
+		hint_x = WINDOW_WIDTH - journal_hint.get_width() - 20
+		hint_y = WINDOW_HEIGHT - 40
+		self.display_surface.blit(journal_hint_shadow, (hint_x + 2, hint_y + 2))
+		self.display_surface.blit(journal_hint, (hint_x, hint_y))
+		
+		# Music mute hint - below journal hint
+		music_status = "MUTED" if self.music_muted else "ON"
+		music_hint = self.fonts['small'].render(f"Press M: Music {music_status}", False, COLORS['white'])
+		music_hint_shadow = self.fonts['small'].render(f"Press M: Music {music_status}", False, COLORS['black'])
+		music_x = WINDOW_WIDTH - music_hint.get_width() - 20
+		music_y = WINDOW_HEIGHT - 65
+		self.display_surface.blit(music_hint_shadow, (music_x + 2, music_y + 2))
+		self.display_surface.blit(music_hint, (music_x, music_y))
+
+		# Save/load hint and transient status
+		save_hint = self.fonts['small'].render("F5: Save  F9: Load", False, COLORS['white'])
+		save_hint_shadow = self.fonts['small'].render("F5: Save  F9: Load", False, COLORS['black'])
+		sh_x = 20
+		sh_y = WINDOW_HEIGHT - 40
+		self.display_surface.blit(save_hint_shadow, (sh_x + 2, sh_y + 2))
+		self.display_surface.blit(save_hint, (sh_x, sh_y))
+		if self.save_message and not self.save_message_timer.active:
+			status = self.fonts['small'].render(self.save_message, False, COLORS['yellow'])
+			status_bg = self.fonts['small'].render(self.save_message, False, COLORS['black'])
+			sx = sh_x
+			sy = sh_y - 24
+			self.display_surface.blit(status_bg, (sx + 2, sy + 2))
+			self.display_surface.blit(status, (sx, sy))
 	
 	def draw_intro_screen(self):
 		"""Draw the opening intro message"""
@@ -329,14 +382,14 @@ class Game:
 		y_pos += 30
 		
 		mission_lines = [
-			"Collect 3 special items for the party:",
-			"GIFT, FLOWERS, and CAKE",
+			"Collect 5 special items for the party:",
+			"GIFT, CAKE, 15 FLOWERS, FIRE BADGE, ARENA BADGE",
 			"",
 			"Find NPCs around town who will challenge you!",
 			"Win battles and answer quiz questions correctly.",
 			"",
-			"Once you have all 3 items, head to the",
-			"ICE AREA (top-left) to find Haider's party!",
+			"Once you have all 5 items, head to the",
+			"WATER ARENA for the final party with Haider!",
 			"",
 			"Reach the party by MIDNIGHT (12:00 AM)!"
 		]
@@ -352,28 +405,33 @@ class Game:
 		items_title = self.fonts['bold'].render("ITEMS TO COLLECT:", False, COLORS['black'])
 		journal.blit(items_title, (30, y_pos))
 		y_pos += 30
-		
-		items_info = [
-			('Gift', self.collected_items['gift'], 'o2 - Shop Owner'),
-			('Flowers', self.collected_items['flowers'], 'o3 - Gardener'),
-			('Cake', self.collected_items['cake'], 'o4 - Baker')
-		]
-		
-		for item_name, collected, npc_hint in items_info:
-			if collected:
-				status = "[X] COLLECTED"
-				color = COLORS['green']
-			else:
-				status = "[ ] Not collected"
-				color = COLORS['red']
-			
-			item_text = self.fonts['regular'].render(f"{item_name}: {status}", False, color)
-			journal.blit(item_text, (50, y_pos))
-			y_pos += 25
-			
-			hint_text = self.fonts['small'].render(f"    (From: {npc_hint})", False, COLORS['dark gray'])
-			journal.blit(hint_text, (50, y_pos))
-			y_pos += 25
+
+		# Gift
+		gift_collected = self.collected_items.get('gift', False)
+		gift_status = "[X] COLLECTED" if gift_collected else "[ ] Not collected"
+		journal.blit(self.fonts['regular'].render(f"Gift: {gift_status}", False, COLORS['green'] if gift_collected else COLORS['red']), (50, y_pos)); y_pos += 25
+		journal.blit(self.fonts['small'].render("    (From: o2 - Shop Owner)", False, COLORS['dark gray']), (50, y_pos)); y_pos += 25
+		# Cake
+		cake_collected = self.collected_items.get('cake', False)
+		cake_status = "[X] COLLECTED" if cake_collected else "[ ] Not collected"
+		journal.blit(self.fonts['regular'].render(f"Cake: {cake_status}", False, COLORS['green'] if cake_collected else COLORS['red']), (50, y_pos)); y_pos += 25
+		journal.blit(self.fonts['small'].render("    (From: o4 - Baker)", False, COLORS['dark gray']), (50, y_pos)); y_pos += 25
+		# Flowers
+		flowers_count = int(self.collected_items.get('flowers_count', 0))
+		flowers_done = flowers_count >= 15
+		flowers_status = f"{'[X]' if flowers_done else '[ ]'} {flowers_count}/15 collected"
+		journal.blit(self.fonts['regular'].render(f"Flowers: {flowers_status}", False, COLORS['green'] if flowers_done else COLORS['red']), (50, y_pos)); y_pos += 25
+		journal.blit(self.fonts['small'].render("    (From: o3/p1/o7 - 5 each via quiz)", False, COLORS['dark gray']), (50, y_pos)); y_pos += 25
+		# Fire badge
+		fire_badge = self.collected_items.get('fire_badge', False)
+		fire_status = "[X] COLLECTED" if fire_badge else "[ ] Not collected"
+		journal.blit(self.fonts['regular'].render(f"Fire Badge: {fire_status}", False, COLORS['green'] if fire_badge else COLORS['red']), (50, y_pos)); y_pos += 25
+		journal.blit(self.fonts['small'].render("    (From: FIRE.TMX boss)", False, COLORS['dark gray']), (50, y_pos)); y_pos += 25
+		# Arena badge
+		arena_badge = self.collected_items.get('arena_badge', False)
+		arena_status = "[X] COLLECTED" if arena_badge else "[ ] Not collected"
+		journal.blit(self.fonts['regular'].render(f"Arena Badge: {arena_status}", False, COLORS['green'] if arena_badge else COLORS['red']), (50, y_pos)); y_pos += 25
+		journal.blit(self.fonts['small'].render("    (From: ARENA.TMX boss)", False, COLORS['dark gray']), (50, y_pos)); y_pos += 25
 		
 		y_pos += 10
 		
@@ -385,13 +443,14 @@ class Game:
 		y_pos += 30
 		
 		hint_lines = [
-			"- Find o2 (Shop Owner) for the GIFT",
-			"- Find o3 (Gardener) for the FLOWERS",
-			"- Find o4 (Baker) for the CAKE",
-			"- Each NPC will challenge you with battles and quizzes",
-			"- Wrong answers add 20 minute time penalty",
-			"- Ice area (top-left) is LOCKED until you have all 3 items",
-			"- Haider is waiting at the party in the ice area!"
+			"- o2 (Shop Owner) -> Gift",
+			"- o4 (Baker) -> Cake",
+			"- o3/p1/o7 quizzes -> 5 Flowers each (total 15)",
+			"- FIRE boss -> Fire Badge",
+			"- ARENA boss -> Arena Badge",
+			"- Wrong quiz answers add 20 minute penalty",
+			"- WATER arena is LOCKED until you have all 5 items",
+			"- Final party with Haider is in WATER.TMX"
 		]
 		
 		for line in hint_lines:
@@ -410,8 +469,12 @@ class Game:
 		for group in (self.all_sprites, self.collision_sprites, self.transition_sprites, self.character_sprites, self.collectible_sprites):
 			group.empty()
 		
-		# Store current map name for special spawns
-		self.current_map = player_start_pos
+		# Store current map name
+		# Determine key name for this tmx map
+		for key, value in self.tmx_maps.items():
+			if value == tmx_map:
+				self.current_map = key
+				break
 
 		# terrain
 		for layer in ['Terrain', 'Terrain Top']:
@@ -457,7 +520,7 @@ class Game:
 						pos = (obj.x, obj.y), 
 						frames = self.overworld_frames['characters']['player'], 
 						groups = self.all_sprites,
-						facing_direction = obj.properties['direction'], 
+						facing_direction = obj.properties.get('direction', 'down'), 
 						collision_sprites = self.collision_sprites)
 					# Add reference to game for party ending logic
 					self.player.game = self
@@ -466,12 +529,12 @@ class Game:
 					pos = (obj.x, obj.y), 
 					frames = self.overworld_frames['characters'][obj.properties['graphic']], 
 					groups = (self.all_sprites, self.collision_sprites, self.character_sprites),
-					facing_direction = obj.properties['direction'],
+					facing_direction = obj.properties.get('direction', 'down'),  # Safe default
 					character_data = TRAINER_DATA[obj.properties['character_id']],
 					player = self.player,
 					create_dialog = self.create_dialog,
 					collision_sprites = self.collision_sprites,
-					radius = obj.properties['radius'],
+					radius = obj.properties.get('radius', 0),  # Safe default
 					nurse = obj.properties['character_id'] == 'Nurse',
 					notice_sound = self.audio['notice'])
 		
@@ -520,6 +583,16 @@ class Game:
 			self.player.blocked = self.show_journal
 		
 		if not self.dialog_tree and not self.battle and not self.quiz and not self.show_journal:
+			# Mute/Unmute music with M key
+			if pygame.K_m in self.keys_just_pressed:
+				self.toggle_music()
+
+			# Quick save / load for testing
+			if pygame.K_F5 in self.keys_just_pressed:
+				self.save_game()
+			if pygame.K_F9 in self.keys_just_pressed:
+				self.load_game()
+			
 			if pygame.K_SPACE in self.keys_just_pressed:
 				for character in self.character_sprites:
 					if check_connections(100, self.player, character):
@@ -532,17 +605,31 @@ class Game:
 				self.index_open = not self.index_open
 				self.player.blocked = not self.player.blocked
 
-	def create_dialog(self, character):
-		if not self.dialog_tree:
-			self.dialog_tree = DialogTree(character, self.player, self.all_sprites, self.fonts['dialog'], self.end_dialog)
+	def create_dialog(self, character, dialog_type='default'):
+		try:
+			if not self.dialog_tree:
+				self.dialog_tree = DialogTree(character, self.player, self.all_sprites, self.fonts['dialog'], self.end_dialog, dialog_type)
+		except Exception as e:
+			print(f"ERROR in create_dialog: {e}")
+			import traceback
+			traceback.print_exc()
+			# Recover gracefully
+			self.player.unblock()
 
-	def end_dialog(self, character):
+	def end_dialog(self, character, trigger_quiz=False):
 		self.dialog_tree = None
 		
 		# Birthday Game: Check if this is the birthday note
 		if character.character_data.get('is_birthday_note', False):
 			self.quest_started = True
 			self.player.unblock()
+			return
+		
+		# Birthday Game: If this was pre-quiz dialog, now start the quiz
+		if trigger_quiz and 'question' in character.character_data:
+			# CRITICAL: Unblock player so they can interact with quiz
+			self.player.unblock()
+			self.start_quiz(character)
 			return
 		
 		if character.nurse:
@@ -555,15 +642,28 @@ class Game:
 			self.audio['overworld'].stop()
 			self.audio['battle'].play(-1)
 			
+			# CRITICAL: Reset character's monsters to full health for retry battles
+			if hasattr(character, 'monsters') and character.monsters:
+				for monster in character.monsters.values():
+					monster.health = monster.get_stat('max_health')
+					monster.energy = monster.get_stat('max_energy')
+					monster.initiative = 0
+					monster.defending = False
+					monster.paused = False
+			
 			# For birthday game: limit to 1v1 battles
-			if self.quest_started and character.monsters:
+			if self.quest_started and hasattr(character, 'monsters') and character.monsters:
 				# Take only first monster from each side
 				player_first = {0: list(self.player_monsters.values())[0]}
 				opponent_first = {0: list(character.monsters.values())[0]}
-			else:
+			elif hasattr(character, 'monsters') and character.monsters:
 				# Normal battles for non-quest NPCs
 				player_first = self.player_monsters
 				opponent_first = character.monsters
+			else:
+				# No monsters - shouldn't happen, but handle it gracefully
+				self.player.unblock()
+				return
 			
 			self.transition_target = Battle(
 				player_monsters = player_first, 
@@ -583,6 +683,13 @@ class Game:
 	def transition_check(self):
 		sprites = [sprite for sprite in self.transition_sprites if sprite.rect.colliderect(self.player.hitbox)]
 		if sprites:
+			# Gate entry to WATER arena until all required items are collected
+			target_map, target_pos = sprites[0].target
+			if target_map == 'water' and not self.has_all_party_items():
+				# Show blocked message and do not transition
+				self.player.unblock()
+				self.ice_blocked_timer = 90
+				return
 			self.player.block()
 			self.transition_target = sprites[0].target
 			self.tint_mode = 'tint'
@@ -608,31 +715,63 @@ class Game:
 		self.display_surface.blit(self.tint_surf, (0,0))
 	
 	def end_battle(self, character):
-		self.audio['battle'].stop()
-		self.transition_target = 'level'
-		self.tint_mode = 'tint'
-		
-		if character:
-			# Check if this character has quiz data (question and options fields)
-			has_quiz = ('question' in character.character_data and 
-			           'options' in character.character_data and 
-			           self.quest_started)
+		try:
+			self.audio['battle'].stop()
+			self.transition_target = 'level'
+			self.tint_mode = 'tint'
 			
-			if has_quiz:
-				# Start quiz after battle for birthday NPCs
-				self.start_quiz(character, None)
-			else:
-				# Normal flow: mark defeated and show dialog
-				character.character_data['defeated'] = True
-				self.create_dialog(character)
-		elif not self.evolution:
+			if character and hasattr(character, 'character_data'):
+				# Check if this character has quiz data (question and options fields)
+				has_quiz = (self.quest_started and 
+				           'question' in character.character_data and 
+				           'options' in character.character_data)
+				
+				# If a boss grants a battle reward, award it now
+				battle_reward = character.character_data.get('battle_reward')
+				if battle_reward and not character.character_data.get('defeated', False):
+					self.award_item(battle_reward, amount=character.character_data.get('reward_amount'))
+					character.character_data['defeated'] = True
+					# Play collection sound
+					if 'notice' in self.audio:
+						self.audio['notice'].play()
+					self.create_dialog(character)
+				elif has_quiz and not character.character_data.get('defeated', False):
+					# Show pre-quiz dialog after battle victory
+					character.change_facing_direction(self.player.rect.center)
+					self.create_dialog(character, dialog_type='pre_quiz')
+				else:
+					# Normal flow: mark defeated and show dialog
+					character.character_data['defeated'] = True
+					self.create_dialog(character)
+			elif not self.evolution:
+				self.player.unblock()
+				self.check_evolution()
+		except Exception as e:
+			print(f"ERROR in end_battle: {e}")
+			import traceback
+			traceback.print_exc()
+			# Recover gracefully
 			self.player.unblock()
-			self.check_evolution()
+			if hasattr(self, 'audio') and 'overworld' in self.audio:
+				self.audio['overworld'].play(-1)
 	
-	def start_quiz(self, character, char_id):
+	def start_quiz(self, character):
 		"""Start a quiz for birthday NPCs after battle"""
+		# Safety check
+		if not hasattr(character, 'character_data'):
+			self.player.unblock()
+			return
+			
 		# Use character data directly (from TRAINER_DATA in game_data.py)
 		quiz_data = character.character_data
+		
+		# Verify quiz data exists
+		if 'question' not in quiz_data or 'options' not in quiz_data:
+			self.player.unblock()
+			return
+		
+		# Ensure player is unblocked and ready for quiz
+		self.player.unblock()
 		
 		# Create quiz with question from character data
 		self.quiz = Quiz(
@@ -642,18 +781,80 @@ class Game:
 			character=character,
 			game=self
 		)
+	def has_all_party_items(self):
+		"""Return True if all 5 required items are collected."""
+		flowers_ok = int(self.collected_items.get('flowers_count', 0)) >= 15
+		return bool(self.collected_items.get('gift') and self.collected_items.get('cake') and flowers_ok and self.collected_items.get('fire_badge') and self.collected_items.get('arena_badge'))
+
+	def award_item(self, item_key, amount=None):
+		"""Award an item or progress. Supports boolean items and flower counts."""
+		if item_key in ('flowers', 'flowers_count'):
+			current = int(self.collected_items.get('flowers_count', 0))
+			self.collected_items['flowers_count'] = current + int(amount or 0)
+		else:
+			self.collected_items[item_key] = True
+		
+		# Block player during quiz so they can't move
+		self.player.block()
 	
 	def end_quiz(self, character):
 		"""Called when quiz is complete"""
+		# Get result before clearing quiz
+		was_correct = self.quiz.correct if self.quiz else False
 		self.quiz = None
-		character.character_data['defeated'] = True
 		
-		# Show the result dialog (correct/wrong was already set in quiz)
-		self.create_dialog(character)
+		# Unblock player after quiz
+		self.player.unblock()
+		
+		# DO NOT set defeated here - it's already set correctly in quiz.py
+		# defeated = True if correct (has item)
+		# defeated = False if wrong (can retry)
+		
+		# Show the appropriate dialog based on result
+		if was_correct:
+			# Show success dialog with 'correct' type
+			self.create_dialog_for_quiz_result(character, 'correct')
+		else:
+			# Show failure dialog with 'wrong' type
+			self.create_dialog_for_quiz_result(character, 'wrong')
 		
 		if not self.evolution:
 			self.audio['overworld'].play(-1)
 
+	def create_dialog_for_quiz_result(self, character, result_type):
+		"""Create dialog showing quiz result (correct or wrong)"""
+		if not self.dialog_tree:
+			# Get the specific dialog based on result
+			if result_type in character.character_data['dialog']:
+				dialog_messages = character.character_data['dialog'][result_type]
+			else:
+				dialog_messages = character.character_data['dialog']['default']
+			
+			# Temporarily override get_dialog to return specific messages
+			original_get_dialog = character.get_dialog
+			character.get_dialog = lambda dt='default': dialog_messages
+			
+			# Create dialog tree
+			self.dialog_tree = DialogTree(character, self.player, self.all_sprites, self.fonts['dialog'], self.end_dialog)
+			
+			# Restore original method
+			character.get_dialog = original_get_dialog
+	
+	def toggle_music(self):
+		"""Toggle music mute/unmute"""
+		self.music_muted = not self.music_muted
+		
+		if self.music_muted:
+			# Mute all audio
+			for sound in self.audio.values():
+				if hasattr(sound, 'set_volume'):
+					sound.set_volume(0)
+		else:
+			# Unmute all audio (set to full volume)
+			for sound in self.audio.values():
+				if hasattr(sound, 'set_volume'):
+					sound.set_volume(1.0)
+	
 	def check_evolution(self):
 		for index, monster in self.player_monsters.items():
 			if monster.evolution:
@@ -664,6 +865,47 @@ class Game:
 					self.player_monsters[index] = Monster(monster.evolution[0], monster.level)
 		if not self.evolution:
 			self.audio['overworld'].play(-1)
+	
+	def save_game(self):
+		"""Write a minimal save file for testing convenience"""
+		try:
+			save_data = {
+				'map': self.current_map,
+				'player_pos': [self.player.rect.centerx, self.player.rect.centery],
+				'quest_started': self.quest_started,
+				'collected_items': self.collected_items,
+				'game_time': self.current_game_time,
+			}
+			with open(self.save_file, 'w') as f:
+				json.dump(save_data, f)
+			self.save_message = 'Saved (F9 to Load)'
+			self.save_message_timer.activate()
+		except Exception as e:
+			print('Save failed:', e)
+
+	def load_game(self):
+		"""Load saved file if present"""
+		try:
+			with open(self.save_file, 'r') as f:
+				save_data = json.load(f)
+			# Restore core state
+			self.quest_started = save_data.get('quest_started', False)
+			self.collected_items.update(save_data.get('collected_items', {}))
+			self.current_game_time = save_data.get('game_time', self.current_game_time)
+			# Re-setup current map to re-place entities and player
+			map_key = save_data.get('map', self.current_map)
+			self.setup(self.tmx_maps[map_key], player_start_pos = 'any')
+			# Move player to saved position
+			px, py = save_data.get('player_pos', [self.player.rect.centerx, self.player.rect.centery])
+			self.player.rect.center = (px, py)
+			self.player.hitbox.center = self.player.rect.center
+			self.save_message = 'Loaded'
+			self.save_message_timer.activate()
+		except FileNotFoundError:
+			self.save_message = 'No Save Found'
+			self.save_message_timer.activate()
+		except Exception as e:
+			print('Load failed:', e)
 
 	def end_evolution(self):
 		self.evolution = None
@@ -673,28 +915,8 @@ class Game:
 
 	# monster encounters 
 	def check_ice_area_blocking(self):
-		"""Block access to ice area until all items are collected"""
-		if not self.quest_started:
-			return
-		
-		has_all_items = all(self.collected_items.values())
-		
-		if not has_all_items:
-			player_x = self.player.rect.centerx
-			player_y = self.player.rect.centery
-			
-			# Ice area is in top-left corner
-			is_near_ice = player_y < 600 and player_x < 900
-			
-			if is_near_ice:
-				# Push player back
-				if self.player.direction.y < 0:
-					self.player.rect.y += 3
-				if self.player.direction.x < 0:
-					self.player.rect.x += 3
-				self.ice_blocked_timer = 60
-		else:
-			self.ice_area_unlocked = True
+		"""Legacy: previously blocked world ice corner. No-op for WATER gate."""
+		return
 	
 	def draw_ice_blocked_message(self):
 		"""Show message when ice area is blocked"""
@@ -707,9 +929,9 @@ class Game:
 			message_box.fill(COLORS['red'])
 			pygame.draw.rect(message_box, COLORS['white'], message_box.get_rect(), 3)
 			
-			title = self.fonts['bold'].render("ICE AREA LOCKED!", False, COLORS['white'])
-			msg1 = self.fonts['regular'].render("You need all 3 items to enter!", False, COLORS['white'])
-			msg2 = self.fonts['small'].render("Collect: Gift, Flowers, and Cake", False, COLORS['white'])
+			title = self.fonts['bold'].render("WATER ARENA LOCKED!", False, COLORS['white'])
+			msg1 = self.fonts['regular'].render("You need all 5 items to enter!", False, COLORS['white'])
+			msg2 = self.fonts['small'].render("Collect: Gift, Cake, 15 Flowers, Fire Badge, Arena Badge", False, COLORS['white'])
 			
 			message_box.blit(title, (box_width//2 - title.get_width()//2, 15))
 			message_box.blit(msg1, (box_width//2 - msg1.get_width()//2, 50))

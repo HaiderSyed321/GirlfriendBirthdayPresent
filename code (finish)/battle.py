@@ -80,8 +80,14 @@ class Battle:
 		if self.selection_mode and self.current_monster:
 			match self.selection_mode:
 				case 'general': limiter = len(BATTLE_CHOICES['full'])
-				case 'attacks': limiter = len(self.current_monster.monster.get_abilities(all = False))
-				case 'switch': limiter = max(1, len(self.available_monsters))
+				case 'attacks':
+					abilities = self.current_monster.monster.get_abilities(all = False) or []
+					limiter = max(1, len(abilities))
+				case 'switch': 
+					available = self.available_monsters
+					if not available:
+						return  # No monsters available to switch
+					limiter = max(1, len(available))
 				case 'target': limiter = len(self.opponent_sprites) if self.selection_side == 'opponent' else len(self.player_sprites)
 
 			if pygame.K_DOWN in keys_just_pressed:
@@ -91,7 +97,10 @@ class Battle:
 			if pygame.K_SPACE in keys_just_pressed:
 				
 				if self.selection_mode == 'switch':
-					index, new_monster = list(self.available_monsters.items())[self.indexes['switch']]
+					available = self.available_monsters
+					if not available:
+						return  # No monsters to switch
+					index, new_monster = list(available.items())[self.indexes['switch']]
 					self.current_monster.kill()
 					self.create_monster(new_monster, index, self.current_monster.pos_index, 'player')
 					self.selection_mode = None
@@ -99,8 +108,12 @@ class Battle:
 
 				if self.selection_mode == 'target':
 					sprite_group = self.opponent_sprites if self.selection_side == 'opponent' else self.player_sprites
+					if len(sprite_group) == 0:
+						return  # No valid targets
 					sprites = {sprite.pos_index: sprite for sprite in sprite_group}
-					monster_sprite = sprites[list(sprites.keys())[self.indexes['target']]]
+					keys_list = list(sprites.keys())
+					idx = self.indexes['target'] % max(1, len(keys_list))
+					monster_sprite = sprites[keys_list[idx]]
 
 					if self.selected_attack:
 						self.current_monster.activate_attack(monster_sprite, self.selected_attack)
@@ -114,8 +127,11 @@ class Battle:
 							TimedSprite(monster_sprite.rect.center, self.monster_frames['ui']['cross'], self.battle_sprites, 1000)
 
 				if self.selection_mode == 'attacks':
+					abilities = self.current_monster.monster.get_abilities(all = False) or []
+					if not abilities:
+						return
 					self.selection_mode = 'target'
-					self.selected_attack = self.current_monster.monster.get_abilities(all = False)[self.indexes['attacks']]
+					self.selected_attack = abilities[self.indexes['attacks'] % len(abilities)]
 					self.selection_side = ATTACK_DATA[self.selected_attack]['target']
 
 				if self.selection_mode == 'general':
@@ -206,9 +222,14 @@ class Battle:
 					else:
 						new_monster_data = None
 				else:
-					new_monster_data = (list(self.monster_data['opponent'].values())[0], monster_sprite.index, monster_sprite.pos_index, 'opponent') if self.monster_data['opponent'] else None
+					# choose next opponent safely
 					if self.monster_data['opponent']:
-						del self.monster_data['opponent'][min(self.monster_data['opponent'])]
+						next_key = min(self.monster_data['opponent'])
+						next_monster = self.monster_data['opponent'][next_key]
+						new_monster_data = (next_monster, monster_sprite.index, monster_sprite.pos_index, 'opponent')
+						del self.monster_data['opponent'][next_key]
+					else:
+						new_monster_data = None
 					# xp
 					xp_amount = monster_sprite.monster.level * 100 / len(self.player_sprites)
 					for player_sprite in self.player_sprites:
@@ -217,8 +238,21 @@ class Battle:
 				monster_sprite.delayed_kill(new_monster_data)
 
 	def opponent_attack(self):
-		ability = choice(self.current_monster.monster.get_abilities())
-		random_target = choice(self.opponent_sprites.sprites()) if ATTACK_DATA[ability]['target'] == 'player' else choice(self.player_sprites.sprites())
+		# Guard: ensure there is a current monster and valid targets
+		if not self.current_monster:
+			return
+		abilities = self.current_monster.monster.get_abilities() or []
+		if not abilities:
+			return
+		ability = choice(abilities)
+		if ATTACK_DATA[ability]['target'] == 'player':
+			if len(self.opponent_sprites.sprites()) == 0:
+				return
+			random_target = choice(self.opponent_sprites.sprites())
+		else:
+			if len(self.player_sprites.sprites()) == 0:
+				return
+			random_target = choice(self.player_sprites.sprites())
 		self.current_monster.activate_attack(random_target, ability)
 
 	def check_end_battle(self):
@@ -341,7 +375,9 @@ class Battle:
 		
 		# updates
 		self.input(keys_just_pressed)
-		self.update_timers()
+		# Only tick opponent delay if a current monster exists
+		if self.current_monster:
+			self.update_timers()
 		self.battle_sprites.update(dt)
 		self.check_active()
 

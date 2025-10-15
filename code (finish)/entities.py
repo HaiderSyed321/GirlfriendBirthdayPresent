@@ -79,7 +79,7 @@ class Character(Entity):
 		if self.can_rotate:
 			self.facing_direction = choice(self.view_directions)
 
-	def get_dialog(self):
+	def get_dialog(self, dialog_type='default'):
 		# Check if this is the party NPC (Haider)
 		if self.character_data.get('is_party_npc', False):
 			return self.get_party_ending_dialog()
@@ -89,19 +89,36 @@ class Character(Entity):
 		if game and not game.quest_started and 'before_quest' in self.character_data['dialog']:
 			return self.character_data['dialog']['before_quest']
 		
-		return self.character_data['dialog'][f"{'defeated' if self.character_data['defeated'] else 'default'}"]
+		# Check for pre-quiz dialog (right after battle victory)
+		if dialog_type == 'pre_quiz':
+			return self.character_data['dialog'].get('pre_quiz', 
+			       self.character_data['dialog'].get('default', ['Hello!']))
+			
+		# After quiz - check if they got the item (defeated = True means item collected)
+		if self.character_data['defeated']:
+			# Safe fallback chain: defeated -> correct -> default -> hardcoded fallback
+			return self.character_data['dialog'].get('defeated', 
+			       self.character_data['dialog'].get('correct',
+			       self.character_data['dialog'].get('default', ['Thanks for battling!'])))
+		
+		# Default dialog (before battle/quiz)
+		return self.character_data['dialog'].get('default', ['Hello!'])
 	
 	def get_party_ending_dialog(self):
 		"""Determine which ending dialog to show based on time and items"""
-		from main import Game
 		# Get reference to game instance through player
 		game = getattr(self.player, 'game', None)
 		
 		if not game:
 			return self.character_data['dialog']['default']
 		
-		# Check if all items are collected
-		all_items_collected = all(game.collected_items.values())
+		# Check if all required party items are collected (gift, cake, 15 flowers, both badges)
+		all_items_collected = False
+		try:
+			all_items_collected = game.has_all_party_items()
+		except Exception:
+			# Fallback for older saves
+			all_items_collected = all(game.collected_items.values())
 		
 		if not all_items_collected:
 			return self.character_data['dialog']['incomplete']
@@ -157,7 +174,7 @@ class Character(Entity):
 			timer.update()
 
 		self.animate(dt)
-		if self.character_data['look_around']:
+		if self.character_data.get('look_around', False):
 			self.raycast()
 			self.move(dt)
 
@@ -170,6 +187,7 @@ class Player(Entity):
 	def input(self):
 		keys = pygame.key.get_pressed()
 		input_vector = vector()
+		# Arrow keys
 		if keys[pygame.K_UP]:
 			input_vector.y -= 1
 		if keys[pygame.K_DOWN]:
@@ -177,6 +195,15 @@ class Player(Entity):
 		if keys[pygame.K_LEFT]:
 			input_vector.x -= 1
 		if keys[pygame.K_RIGHT]:
+			input_vector.x += 1
+		# WASD keys
+		if keys[pygame.K_w]:
+			input_vector.y -= 1
+		if keys[pygame.K_s]:
+			input_vector.y += 1
+		if keys[pygame.K_a]:
+			input_vector.x -= 1
+		if keys[pygame.K_d]:
 			input_vector.x += 1
 		self.direction = input_vector.normalize() if input_vector else input_vector
 
