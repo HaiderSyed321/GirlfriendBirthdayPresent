@@ -272,16 +272,7 @@
    </properties>
    <point/>
   </object>
-  <object id="1146" name="Character" x="4096" y="2048">
-   <properties>
-    <property name="change_direction" type="bool" value="true"/>
-    <property name="character_id" value="o5"/>
-    <property name="direction" value="up"/>
-    <property name="graphic" value="straw"/>
-    <property name="radius" value="400"/>
-   </properties>
-   <point/>
-  </object>
+  
   <object id="1149" name="Player" x="4318.32" y="1482.47">
    <properties>
     <property name="direction" value="down"/>
