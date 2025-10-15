@@ -92,9 +92,9 @@ class Battle:
 				active_monsters = [(s.index, s.monster) for s in self.player_sprites]
 				available_dict = {idx: mon for idx, mon in self.monster_data['player'].items() if (idx, mon) not in active_monsters and mon.health > 0}
 				self.available_monsters = available_dict
-				limiter = max(1, len(available_dict))
-				if limiter == 0:
+				if len(available_dict) == 0:
 					return
+				limiter = len(available_dict)
 			elif self.selection_mode == 'target':
 				limiter = len(self.opponent_sprites) if self.selection_side == 'opponent' else len(self.player_sprites)
 			else:
@@ -107,15 +107,15 @@ class Battle:
 			if pygame.K_SPACE in keys_just_pressed:
 				
 				if self.selection_mode == 'switch':
-				available = getattr(self, 'available_monsters', {})
-				if not available:
-					return  # No monsters to switch
-				index, new_monster = list(available.items())[self.indexes['switch'] % max(1, len(available))]
-				pos_index = self.current_monster.pos_index
-				self.current_monster.kill()
-				self.create_monster(new_monster, index, pos_index, 'player')
-				self.selection_mode = 'general'
-				self.update_all_monsters('resume')
+					available = getattr(self, 'available_monsters', {})
+					if not available:
+						return  # No monsters to switch
+					index, new_monster = list(available.items())[self.indexes['switch'] % len(available)]
+					pos_index = self.current_monster.pos_index
+					self.current_monster.kill()
+					self.create_monster(new_monster, index, pos_index, 'player')
+					self.selection_mode = 'general'
+					self.update_all_monsters('resume')
 
 				if self.selection_mode == 'target':
 					sprite_group = self.opponent_sprites if self.selection_side == 'opponent' else self.player_sprites
@@ -353,9 +353,6 @@ class Battle:
 		# monsters 
 		active_monsters = [(monster_sprite.index, monster_sprite.monster) for monster_sprite in self.player_sprites]
 		self.available_monsters = {index: monster for index, monster in self.monster_data['player'].items() if (index, monster) not in active_monsters and monster.health > 0}
-		# Ensure there is always at least one entry to avoid zero-len math
-		if not self.available_monsters:
-			return
 
 		for index, monster in enumerate(self.available_monsters.values()):
 			selected = index == self.indexes['switch']
