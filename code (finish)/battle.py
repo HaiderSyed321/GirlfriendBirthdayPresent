@@ -79,8 +79,11 @@ class Battle:
 		MonsterLevelSprite(entity, level_pos, monster_sprite, self.battle_sprites, self.fonts['small'])
 		MonsterStatsSprite(monster_sprite.rect.midbottom + vector(0,20), monster_sprite, (150,48), self.battle_sprites, self.fonts['small'])
 
-	def input(self, keys_just_pressed):
-		if self.selection_mode:
+    def input(self, keys_just_pressed):
+        # Ignore input until a monster is active to take a turn
+        if not self.selection_mode or not self.current_monster:
+            return
+        if self.selection_mode:
 			# Determine menu limiter based on mode
 			if self.selection_mode == 'general':
 				limiter = len(BATTLE_CHOICES['full'])
@@ -116,6 +119,7 @@ class Battle:
 					self.create_monster(new_monster, index, pos_index, 'player')
 					self.selection_mode = 'general'
 					self.update_all_monsters('resume')
+					return
 
 				if self.selection_mode == 'target':
 					sprite_group = self.opponent_sprites if self.selection_side == 'opponent' else self.player_sprites
@@ -126,7 +130,7 @@ class Battle:
 					idx = self.indexes['target'] % max(1, len(keys_list))
 					monster_sprite = sprites[keys_list[idx]]
 
-					if self.selected_attack:
+					if self.selected_attack and self.current_monster:
 						self.current_monster.activate_attack(monster_sprite, self.selected_attack)
 						self.selected_attack, self.current_monster, self.selection_mode = None, None, None
 					else:
