@@ -662,10 +662,10 @@ class Game:
 					monster.defending = False
 					monster.paused = False
 			
-			# Allow switching monsters: pass the full player roster; opponent as defined
+			# Keep Story battles 1v1 start, but allow switching later
 			if hasattr(character, 'monsters') and character.monsters:
-				player_first = self.player_monsters
-				opponent_first = character.monsters
+				player_first = {0: list(self.player_monsters.values())[0]}
+				opponent_first = {0: list(character.monsters.values())[0]}
 			else:
 				# No monsters - shouldn't happen, but handle it gracefully
 				self.player.unblock()

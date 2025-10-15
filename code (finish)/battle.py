@@ -48,13 +48,14 @@ class Battle:
 		self.setup()
 
 	def setup(self):
-		for entity, monster in self.monster_data.items():
-			for index, monster in {k:v for k,v in monster.items() if k <= 2}.items():
-				self.create_monster(monster, index, index, entity)
-
-			# remove opponent monster data 
-			for i in range(len(self.opponent_sprites)):
-				del self.monster_data['opponent'][i]
+		# Create ONLY one active monster per side (1v1 start),
+		# keep remaining monsters in self.monster_data for switches/replacements.
+		for entity, monsters in self.monster_data.items():
+			# find the first index deterministically
+			if not monsters:
+				continue
+			first_index = sorted(monsters.keys())[0]
+			self.create_monster(monsters[first_index], first_index, 0, entity)
 	def create_monster(self, monster, index, pos_index, entity):
 		monster.paused = False
 		frames = self.monster_frames['monsters'][monster.name]
@@ -106,10 +107,10 @@ class Battle:
 			if pygame.K_SPACE in keys_just_pressed:
 				
 				if self.selection_mode == 'switch':
-					available = self.available_monsters
-					if not available:
-						return  # No monsters to switch
-				index, new_monster = list(available.items())[self.indexes['switch'] % len(available)]
+				available = getattr(self, 'available_monsters', {})
+				if not available:
+					return  # No monsters to switch
+				index, new_monster = list(available.items())[self.indexes['switch'] % max(1, len(available))]
 				pos_index = self.current_monster.pos_index
 				self.current_monster.kill()
 				self.create_monster(new_monster, index, pos_index, 'player')
@@ -352,6 +353,9 @@ class Battle:
 		# monsters 
 		active_monsters = [(monster_sprite.index, monster_sprite.monster) for monster_sprite in self.player_sprites]
 		self.available_monsters = {index: monster for index, monster in self.monster_data['player'].items() if (index, monster) not in active_monsters and monster.health > 0}
+		# Ensure there is always at least one entry to avoid zero-len math
+		if not self.available_monsters:
+			return
 
 		for index, monster in enumerate(self.available_monsters.values()):
 			selected = index == self.indexes['switch']
