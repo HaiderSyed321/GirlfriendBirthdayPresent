@@ -2,8 +2,8 @@ TRAINER_DATA = {
 	'o1': {
 		'monsters': {0: ('Jacana', 14), 1: ('Cleaf', 15)},
 		'dialog': {
-			'before_quest': ['Hey Eman! Happy Birthday!', 'Shouldn\'t you check your house first?', 'I think someone left you something...'],
-			'default': ['Hey, how are you?', 'Oh, so you want to fight?', 'FIGHT!'], 
+			'before_quest': ['Hey Eman! Happy Birthday!', 'Check your house first — there\'s a note about a party!', 'Go read it inside!'],
+			'default': ['Happy Birthday, Eman!', 'We\'re all helping prepare your party!', 'Want to spar a bit? FIGHT!'], 
 			'defeated': ['You are very strong!', 'Let\'s fight again sometime?']},
 		'directions': ['down'],
 		'look_around': True,
@@ -34,8 +34,9 @@ TRAINER_DATA = {
 				"Excellent! You really know Haider!",
 				"Here's the GIFT for the party!",
 				"",
-				"Now head to the ice area (top-left)",
-				"once you have all 3 items!",
+				"Collect the remaining items:",
+				"15 Flowers, Cake, Fire Badge, Arena Badge",
+				"Then meet Haider at the WATER arena!",
 				"",
 				"*** GIFT COLLECTED! ***"
 			],
@@ -50,10 +51,8 @@ TRAINER_DATA = {
 			],
 			'defeated': [
 				"You already got the GIFT from me!",
-				"Keep collecting the other items!",
-				"",
-				"Don't forget - you need all 3 items",
-				"to enter the ice area!"
+				"Now go get Cake, 15 Flowers, Fire Badge, Arena Badge!",
+				"Meet Haider at the WATER arena when you have all 5!"
 			]
 		},
 		'directions': ['left', 'down'],
@@ -90,12 +89,10 @@ TRAINER_DATA = {
 			'correct': [
 				"Beautiful! The Woodsworth water fountain!",
 				"That's where your love story began...",
-				"These FLOWERS are perfect for the party!",
+				"Here are 5 FLOWERS toward the 15 you need!",
 				"",
-				"Collect all 3 items, then head to",
-				"the ice area to find Haider!",
-				"",
-				"*** FLOWERS COLLECTED! ***"
+				"Keep going for Cake, Gift, and the two badges",
+				"Then meet Haider at the WATER arena!"
 			],
 			'wrong': [
 				"Hmm, that's not right!",
@@ -107,11 +104,8 @@ TRAINER_DATA = {
 				"(+20 minutes time penalty)"
 			],
 			'defeated': [
-				"You already have the FLOWERS!",
-				"Keep going, Eman!",
-				"",
-				"Collect all 3 items to unlock",
-				"the ice area party!"
+				"You got my FLOWERS!",
+				"Keep going for the rest and we\'ll see you at WATER!"
 			]
 		},
 		'directions': ['left', 'right', 'up', 'down'],
@@ -149,11 +143,9 @@ TRAINER_DATA = {
 			'correct': [
 				"December 2019! Almost 6 years together!",
 				"What a beautiful journey you two have had!",
-				"Here's the birthday CAKE!",
+				"Here's your birthday CAKE!",
 				"",
-				"Once you have all 3 items,",
-				"head to the ice area for the party!",
-				"",
+				"Collect the rest and meet Haider at the WATER arena!",
 				"*** CAKE COLLECTED! ***"
 			],
 			'wrong': [
@@ -167,10 +159,7 @@ TRAINER_DATA = {
 			],
 			'defeated': [
 				"You already got the CAKE!",
-				"How's your collection going?",
-				"",
-				"Remember - all 3 items needed",
-				"to access the ice area!"
+				"Get Gift, 15 Flowers, and the two badges next!"
 			]
 		},
 		'directions': ['right'],
@@ -301,12 +290,12 @@ TRAINER_DATA = {
 			'correct': [
 				"December 3rd 2019! What a magical day!",
 				"That first kiss was unforgettable!",
-				"Here are 5 more flowers!"
+				"Here are 5 more FLOWERS (toward 15)!"
 			],
 			'wrong': [
 				"Not quite! It was December 3rd 2019!",
 				"But that's okay, memories can blur!",
-				"No flowers, but keep going!",
+				"No flowers this time, but keep going!",
 				"(+15 minutes time penalty)"
 			]
 		},
@@ -325,19 +314,17 @@ TRAINER_DATA = {
 		'monsters': {0: ('Friolera', 18)},  # Birthday NPC: Quiz #5 (Joke Question)
 		'dialog': {
 			'default': [
-				"Haha! This question is a funny one...",
+				"Haha! This one is a funny birthday question...",
 				"Haider says he can't remember!",
 				"But let's see what you say..."
 			],
 			'correct': [
-				"Haha! Haider told me he actually has no idea",
-				"so you pass! All answers were correct!",
-				"Here are 5 flowers anyway!"
+				"Haha! Haider actually has no idea — ALL answers are correct!",
+				"Here are 5 FLOWERS (toward 15)!"
 			],
 			'wrong': [
-				"Wait... Haider told me he actually has no idea",
-				"so you pass! All answers were correct!",
-				"Here are 5 flowers anyway!"
+				"Trick question! All answers were correct!",
+				"Here are 5 FLOWERS (toward 15)!"
 			]
 		},
 		'directions': ['right'],
@@ -355,19 +342,19 @@ TRAINER_DATA = {
 		'monsters': {0: ('Atrox', 20)},  # Birthday NPC: Quiz #6
 		'dialog': {
 			'default': [
-				"One more question!",
+				"One more birthday question!",
 				"This one's about food...",
 				"What does Haider cook best for you?"
 			],
 			'correct': [
 				"Gochujang pasta! Absolutely delicious!",
 				"He really knows how to cook for you!",
-				"Here are your final 5 flowers!"
+				"Here are your final 5 FLOWERS (15/15)!"
 			],
 			'wrong': [
 				"Nope! It's the Gochujang pasta!",
 				"That's his specialty for you!",
-				"No flowers, but you tried!",
+				"No flowers this time, but you tried!",
 				"(+15 minutes time penalty)"
 			]
 		},
@@ -385,8 +372,8 @@ TRAINER_DATA = {
 	'p2': {
 		'monsters': {0: ('Friolera', 25), 1: ('Gulfin', 20), 2: ('Atrox',24), 3: ('Finiette', 30)},
 		'dialog': {
-			'default': ['I love trees', 'and fights'], 
-			'defeated': ['Good luck with the boss!']},
+			'default': ['Happy Birthday, Eman!', 'Train hard and collect all 5 items!'], 
+			'defeated': ['Great spar! The Arena boss awaits!']},
 		'directions': ['right'],
 		'look_around': False,
 		'defeated': False,
@@ -395,7 +382,7 @@ TRAINER_DATA = {
 	'p3': {
 		'monsters': {0: ('Friolera', 25), 1: ('Gulfin', 20), 2: ('Atrox',24), 3: ('Finiette', 30)},
 		'dialog': {
-			'default': ['I love trees', 'and fights'], 
+			'default': ['Birthday girl! Collect those 5 items!', 'Want to train?'], 
 			'defeated': ['Good luck with the boss!']},
 		'directions': ['right'],
 		'look_around': False,
@@ -405,7 +392,7 @@ TRAINER_DATA = {
 	'p4': {
 		'monsters': {0: ('Friolera', 25), 1: ('Gulfin', 20), 2: ('Atrox',24), 3: ('Finiette', 30)},
 		'dialog': {
-			'default': ['I love trees', 'and fights'], 
+			'default': ['We\'re all in on Haider\'s surprise!', 'Gather all 5 items!'], 
 			'defeated': ['Good luck with the boss!']},
 		'directions': ['right'],
 		'look_around': False,
@@ -433,8 +420,8 @@ TRAINER_DATA = {
 	'w1': {
 		'monsters': {0: ('Friolera', 25), 1: ('Gulfin', 20), 2: ('Draem',24), 3: ('Finiette', 30)},
 		'dialog': {
-			'default': ['It\'s so cold in here', 'maybe a fight will warm me up'], 
-			'defeated': ['Good luck with the boss!']},
+			'default': ['Welcome to the Water Arena!', 'If you\'re missing items, come back later!'], 
+			'defeated': ['Good luck with the final celebration!']},
 		'directions': ['left'],
 		'look_around': True,
 		'defeated': False,
@@ -443,8 +430,8 @@ TRAINER_DATA = {
 	'w2': {
 		'monsters': {0: ('Friolera', 25), 1: ('Gulfin', 20), 2: ('Draem',24), 3: ('Finiette', 30)},
 		'dialog': {
-			'default': ['It\'s so cold in here', 'maybe a fight will warm me up'], 
-			'defeated': ['Good luck with the boss!']},
+			'default': ['Almost party time!', 'Make sure you\'ve got all 5 items.'], 
+			'defeated': ['Good luck with the final celebration!']},
 		'directions': ['right'],
 		'look_around': True,
 		'defeated': False,
@@ -453,8 +440,8 @@ TRAINER_DATA = {
 	'w3': {
 		'monsters': {0: ('Friolera', 25), 1: ('Gulfin', 20), 2: ('Draem',24), 3: ('Finiette', 30)},
 		'dialog': {
-			'default': ['It\'s so cold in here', 'maybe a fight will warm me up'], 
-			'defeated': ['Good luck with the boss!']},
+			'default': ['The water\'s shimmering for your birthday!', 'Got all 5 items yet?'], 
+			'defeated': ['Good luck with the final celebration!']},
 		'directions': ['right'],
 		'look_around': True,
 		'defeated': False,
@@ -463,8 +450,8 @@ TRAINER_DATA = {
 	'w4': {
 		'monsters': {0: ('Friolera', 25), 1: ('Gulfin', 20), 2: ('Draem',24), 3: ('Finiette', 30)},
 		'dialog': {
-			'default': ['It\'s so cold in here', 'maybe a fight will warm me up'], 
-			'defeated': ['Good luck with the boss!']},
+			'default': ['Final checks!', 'Party starts when you have all 5.'], 
+			'defeated': ['Good luck with the final celebration!']},
 		'directions': ['left'],
 		'look_around': True,
 		'defeated': False,
@@ -473,8 +460,8 @@ TRAINER_DATA = {
 	'w5': {
 		'monsters': {0: ('Friolera', 25), 1: ('Gulfin', 20), 2: ('Draem',24), 3: ('Finiette', 30)},
 		'dialog': {
-			'default': ['It\'s so cold in here', 'maybe a fight will warm me up'], 
-			'defeated': ['Good luck with the boss!']},
+			'default': ['You\'re so close, Eman!', 'Haider\'s waiting at the top!'], 
+			'defeated': ['Good luck with the final celebration!']},
 		'directions': ['right'],
 		'look_around': True,
 		'defeated': False,
@@ -692,19 +679,23 @@ TRAINER_DATA = {
 				'you will have to work for it!',
 				'',
 				'YOUR MISSION:',
-				'Collect 3 special items and reach the',
+				'Collect 5 special items and reach the',
 				'party venue by MIDNIGHT (12:00 AM)',
 				'',
 				'THE ITEMS YOU NEED:',
 				'[*] A perfect birthday gift',
-				'[*] Beautiful flowers',
+				'[*] Beautiful flowers (15 total)',
 				'[*] Your birthday cake',
+				'[*] Fire Badge (Fire Arena boss)',
+				'[*] Arena Badge (Plant Arena boss)',
 				'',
 				'THE JOURNEY:',
 				'[1] Shopping District - Get the gift',
-				'[2] Flower Garden - Pick flowers',
+				'[2] Flower Garden - Win quizzes for flowers',
 				'[3] Bakery - Collect your cake',
-				'[4] Party Venue - Find me!',
+				'[4] Fire Arena - Earn Fire Badge',
+				'[5] Plant Arena - Earn Arena Badge',
+				'[6] Water Arena - Final party with Haider',
 				'',
 				'IMPORTANT:',
 				'>> Time: 6:00 PM -> Deadline: 12:00 AM',
@@ -719,7 +710,7 @@ TRAINER_DATA = {
 				'',
 				'===============================',
 				'',
-				'Wow! That sounds exciting!',
+				'Wow! That sounds exciting! Collect all 5 items!',
 				'',
 				'You better get going, Eman!',
 				'Time is ticking!',
