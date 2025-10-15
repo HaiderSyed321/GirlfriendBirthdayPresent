@@ -200,7 +200,7 @@ class Game:
 		self.display_surface.blit(remaining_surf, (WINDOW_WIDTH - 210, 60))
 		
 		# Items display (top-left)
-		items_panel = pygame.Surface((240, 140))
+		items_panel = pygame.Surface((260, 160))
 		items_panel.fill(COLORS['dark'])
 		items_panel.set_alpha(200)
 		self.display_surface.blit(items_panel, (20, 20))
@@ -543,21 +543,20 @@ class Game:
 
 	def spawn_collectibles(self):
 		"""Spawn collectibles on specific maps if not yet collected"""
-		# Define spawn positions for each collectible on specific maps
-		collectible_spawns = {
-			'world': [
-				{'type': 'gift', 'pos': (800, 400)},
-				{'type': 'flowers', 'pos': (1200, 600)},
-				{'type': 'cake', 'pos': (400, 800)}
-			]
-		}
+		# In the birthday quest, items are obtained via NPCs/bosses & quizzes,
+		# so we do not spawn pick-ups on the map anymore. Keep the structure
+		# for potential future use, but leave it empty.
+		collectible_spawns = {}
 		
 		# Spawn collectibles for current map if quest is started
 		if self.quest_started and self.current_map in collectible_spawns:
 			for spawn in collectible_spawns[self.current_map]:
 				item_type = spawn['type']
-				# Only spawn if not yet collected
-				if not self.collected_items[item_type]:
+				# Defensive: skip unknown keys (e.g., legacy 'flowers')
+				if item_type not in self.collected_items:
+					continue
+				# Only spawn if not yet collected (boolean items only)
+				if isinstance(self.collected_items[item_type], bool) and not self.collected_items[item_type]:
 					CollectibleSprite(spawn['pos'], item_type, (self.all_sprites, self.collectible_sprites))
 	
 	def check_collectibles(self):
@@ -869,11 +868,19 @@ class Game:
 	def save_game(self):
 		"""Write a minimal save file for testing convenience"""
 		try:
+			# Backward-compatible save: include all new keys with defaults
+			save_collected = {
+				'gift': bool(self.collected_items.get('gift', False)),
+				'cake': bool(self.collected_items.get('cake', False)),
+				'flowers_count': int(self.collected_items.get('flowers_count', 0)),
+				'fire_badge': bool(self.collected_items.get('fire_badge', False)),
+				'arena_badge': bool(self.collected_items.get('arena_badge', False))
+			}
 			save_data = {
 				'map': self.current_map,
 				'player_pos': [self.player.rect.centerx, self.player.rect.centery],
 				'quest_started': self.quest_started,
-				'collected_items': self.collected_items,
+				'collected_items': save_collected,
 				'game_time': self.current_game_time,
 			}
 			with open(self.save_file, 'w') as f:
@@ -890,7 +897,13 @@ class Game:
 				save_data = json.load(f)
 			# Restore core state
 			self.quest_started = save_data.get('quest_started', False)
-			self.collected_items.update(save_data.get('collected_items', {}))
+			# Merge collected items safely with defaults
+			saved_items = save_data.get('collected_items', {})
+			self.collected_items['gift'] = bool(saved_items.get('gift', False))
+			self.collected_items['cake'] = bool(saved_items.get('cake', False))
+			self.collected_items['flowers_count'] = int(saved_items.get('flowers_count', saved_items.get('flowers', 0)))
+			self.collected_items['fire_badge'] = bool(saved_items.get('fire_badge', False))
+			self.collected_items['arena_badge'] = bool(saved_items.get('arena_badge', False))
 			self.current_game_time = save_data.get('game_time', self.current_game_time)
 			# Re-setup current map to re-place entities and player
 			map_key = save_data.get('map', self.current_map)

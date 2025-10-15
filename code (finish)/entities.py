@@ -95,7 +95,7 @@ class Character(Entity):
 			       self.character_data['dialog'].get('default', ['Hello!']))
 			
 		# After quiz - check if they got the item (defeated = True means item collected)
-		if self.character_data['defeated']:
+		if self.character_data.get('defeated', False):
 			# Safe fallback chain: defeated -> correct -> default -> hardcoded fallback
 			return self.character_data['dialog'].get('defeated', 
 			       self.character_data['dialog'].get('correct',
