@@ -19,7 +19,8 @@ class MonsterIndex:
 		self.tint_surf.set_alpha(200)
 
 		# dimensions 
-		self.main_rect = pygame.FRect(0,0,WINDOW_WIDTH * 0.6,WINDOW_HEIGHT * 0.8).move_to(center = (WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2))
+		self.main_rect = pygame.Rect(0,0,WINDOW_WIDTH * 0.6,WINDOW_HEIGHT * 0.8)
+		self.main_rect.center = (WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2)
 
 		# list 
 		self.visible_items = 6
@@ -40,13 +41,12 @@ class MonsterIndex:
 		self.max_stats['health'] = self.max_stats.pop('max_health')
 		self.max_stats['energy'] = self.max_stats.pop('max_energy')
 
-	def input(self):
-		keys = pygame.key.get_just_pressed()
-		if keys[pygame.K_UP]:
+	def input(self, keys_just_pressed):
+		if pygame.K_UP in keys_just_pressed:
 			self.index -= 1
-		if keys[pygame.K_DOWN]:
+		if pygame.K_DOWN in keys_just_pressed:
 			self.index += 1
-		if keys[pygame.K_SPACE]:
+		if pygame.K_SPACE in keys_just_pressed:
 			if self.selected_index != None:
 				selected_monster = self.monsters[self.selected_index]
 				current_monster  = self.monsters[self.index]
@@ -59,7 +59,7 @@ class MonsterIndex:
 		self.index = self.index % len(self.monsters)
 
 	def display_list(self):
-		bg_rect = pygame.FRect(self.main_rect.topleft,(self.list_width, self.main_rect.height))
+		bg_rect = pygame.Rect(self.main_rect.topleft,(self.list_width, self.main_rect.height))
 		pygame.draw.rect(self.display_surface, COLORS['gray'], bg_rect,0,0,12,0,12,0)
 
 		v_offset = 0 if self.index < self.visible_items else -(self.index - self.visible_items + 1) * self.item_height
@@ -69,13 +69,13 @@ class MonsterIndex:
 			text_color = COLORS['white'] if self.selected_index != index else COLORS['gold']
 
 			top = self.main_rect.top + index * self.item_height + v_offset
-			item_rect = pygame.FRect(self.main_rect.left,top,self.list_width,self.item_height)
+			item_rect = pygame.Rect(self.main_rect.left,top,self.list_width,self.item_height)
 			
 			text_surf = self.fonts['regular'].render(monster.name, False, text_color)
-			text_rect = text_surf.get_frect(midleft = item_rect.midleft + vector(90, 0))
+			text_rect = text_surf.get_rect(midleft = item_rect.midleft + vector(90, 0))
 
 			icon_surf = self.icon_frames[monster.name]
-			icon_rect = icon_surf.get_frect(center = item_rect.midleft + vector(45,0))
+			icon_rect = icon_surf.get_rect(center = item_rect.midleft + vector(45,0))
 
 			if item_rect.colliderect(self.main_rect):
 				# check corners
@@ -106,31 +106,31 @@ class MonsterIndex:
 		monster = self.monsters[self.index]
 
 		# main bg
-		rect = pygame.FRect(self.main_rect.left + self.list_width,self.main_rect.top, self.main_rect.width - self.list_width, self.main_rect.height)
+		rect = pygame.Rect(self.main_rect.left + self.list_width,self.main_rect.top, self.main_rect.width - self.list_width, self.main_rect.height)
 		pygame.draw.rect(self.display_surface, COLORS['dark'], rect, 0, 12,0, 12,0)
 
 		# monster display
-		top_rect = pygame.FRect(rect.topleft, (rect.width, rect.height * 0.4))
+		top_rect = pygame.Rect(rect.topleft, (rect.width, rect.height * 0.4))
 		pygame.draw.rect(self.display_surface, COLORS[monster.element], top_rect, 0,0,0,12)
 
 		# monster animation 
 		self.frame_index += ANIMATION_SPEED * dt
 		monster_surf = self.monster_frames[monster.name]['idle'][int(self.frame_index) % len(self.monster_frames[monster.name]['idle'])]
-		monster_rect = monster_surf.get_frect(center = top_rect.center)
+		monster_rect = monster_surf.get_rect(center = top_rect.center)
 		self.display_surface.blit(monster_surf, monster_rect)
 
 		# name 
 		name_surf = self.fonts['bold'].render(monster.name, False, COLORS['white'])
-		name_rect = name_surf.get_frect(topleft = top_rect.topleft + vector(10,10))
+		name_rect = name_surf.get_rect(topleft = top_rect.topleft + vector(10,10))
 		self.display_surface.blit(name_surf, name_rect)
 
 		# level
 		level_surf = self.fonts['regular'].render(f'Lvl: {monster.level}', False, COLORS['white'])
-		level_rect = level_surf.get_frect(bottomleft = top_rect.bottomleft + vector(10,-16))
+		level_rect = level_surf.get_rect(bottomleft = top_rect.bottomleft + vector(10,-16))
 		self.display_surface.blit(level_surf, level_rect)
 		draw_bar(
 			surface = self.display_surface, 
-			rect = pygame.FRect(level_rect.bottomleft, (100,4)), 
+			rect = pygame.Rect(level_rect.bottomleft, (100,4)), 
 			value = monster.xp, 
 			max_value = monster.level_up, 
 			color = COLORS['white'], 
@@ -138,7 +138,7 @@ class MonsterIndex:
 
 		# element
 		element_surf = self.fonts['regular'].render(monster.element, False, COLORS['white'])
-		element_rect = element_surf.get_frect(bottomright = top_rect.bottomright + vector(-10,-10))
+		element_rect = element_surf.get_rect(bottomright = top_rect.bottomright + vector(-10,-10))
 		self.display_surface.blit(element_surf, element_rect)
 
 		# health and energy
@@ -150,16 +150,18 @@ class MonsterIndex:
 			'right_side': rect.left + rect.width * 3/4
 		}
 
-		healthbar_rect = pygame.FRect((0,0), (bar_data['width'],bar_data['height'])).move_to(midtop = (bar_data['left_side'], bar_data['top']))
+		healthbar_rect = pygame.Rect((0,0), (bar_data['width'],bar_data['height']))
+		healthbar_rect.midtop = (bar_data['left_side'], bar_data['top'])
 		draw_bar(self.display_surface, healthbar_rect, monster.health, monster.get_stat('max_health'), COLORS['red'], COLORS['black'], 2)
 		hp_text = self.fonts['regular'].render(f"HP: {int(monster.health)}/{int(monster.get_stat('max_health'))}", False, COLORS['white'])
-		hp_rect = hp_text.get_frect(midleft = healthbar_rect.midleft + vector(10,0))
+		hp_rect = hp_text.get_rect(midleft = healthbar_rect.midleft + vector(10,0))
 		self.display_surface.blit(hp_text, hp_rect)
 
-		energybar_rect = pygame.FRect((0,0), (bar_data['width'],bar_data['height'])).move_to(midtop = (bar_data['right_side'], bar_data['top']))
+		energybar_rect = pygame.Rect((0,0), (bar_data['width'],bar_data['height']))
+		energybar_rect.midtop = (bar_data['right_side'], bar_data['top'])
 		draw_bar(self.display_surface, energybar_rect, monster.energy, monster.get_stat('max_energy'), COLORS['blue'], COLORS['black'], 2)
 		ep_text = self.fonts['regular'].render(f"EP: {int(monster.energy)}/{int(monster.get_stat('max_energy'))}", False, COLORS['white'])
-		ep_rect = ep_text.get_frect(midleft = energybar_rect.midleft + vector(10,0))
+		ep_rect = ep_text.get_rect(midleft = energybar_rect.midleft + vector(10,0))
 		self.display_surface.blit(ep_text, ep_rect)
 
 		# info 
@@ -167,36 +169,37 @@ class MonsterIndex:
 		info_height = rect.bottom - healthbar_rect.bottom
 
 		# stats 
-		stats_rect = pygame.FRect(sides['left'], healthbar_rect.bottom, healthbar_rect.width, info_height).inflate(0,-60).move(0,15)
+		stats_rect = pygame.Rect(sides['left'], healthbar_rect.bottom, healthbar_rect.width, info_height).inflate(0,-60).move(0,15)
 		stats_text_surf = self.fonts['regular'].render('Stats', False, COLORS['white'])
-		stats_text_rect = stats_text_surf.get_frect(bottomleft = stats_rect.topleft)
+		stats_text_rect = stats_text_surf.get_rect(bottomleft = stats_rect.topleft)
 		self.display_surface.blit(stats_text_surf, stats_text_rect)
 
 		monster_stats = monster.get_stats()
 		stat_height = stats_rect.height / len(monster_stats)
 
 		for index, (stat, value) in enumerate(monster_stats.items()):
-			single_stat_rect = pygame.FRect(stats_rect.left,stats_rect.top + index * stat_height,stats_rect.width,stat_height)
+			single_stat_rect = pygame.Rect(stats_rect.left,stats_rect.top + index * stat_height,stats_rect.width,stat_height)
 
 			# icon 
 			icon_surf = self.ui_frames[stat]
-			icon_rect = icon_surf.get_frect(midleft = single_stat_rect.midleft + vector(5,0))
+			icon_rect = icon_surf.get_rect(midleft = single_stat_rect.midleft + vector(5,0))
 			self.display_surface.blit(icon_surf, icon_rect)
 
 			# text 
 			text_surf = self.fonts['regular'].render(stat, False, COLORS['white'])
-			text_rect = text_surf.get_frect(topleft = icon_rect.topleft + vector(30,-10))
+			text_rect = text_surf.get_rect(topleft = icon_rect.topleft + vector(30,-10))
 			self.display_surface.blit(text_surf, text_rect)
 
 			# bar 
-			bar_rect = pygame.FRect((text_rect.left, text_rect.bottom + 2), (single_stat_rect.width  - (text_rect.left - single_stat_rect.left),4))
+			bar_rect = pygame.Rect((text_rect.left, text_rect.bottom + 2), (single_stat_rect.width  - (text_rect.left - single_stat_rect.left),4))
 			draw_bar(self.display_surface, bar_rect, value, self.max_stats[stat] * monster.level, COLORS['white'], COLORS['black'])
 
 
 		# abilities 
-		ability_rect = stats_rect.copy().move_to(left = sides['right'])
+		ability_rect = stats_rect.copy()
+		ability_rect.left = sides['right']
 		ability_text_surf = self.fonts['regular'].render('Ability', False, COLORS['white'])
-		ability_text_rect = ability_text_surf.get_frect(bottomleft = ability_rect.topleft)
+		ability_text_rect = ability_text_surf.get_rect(bottomleft = ability_rect.topleft)
 		self.display_surface.blit(ability_text_surf, ability_text_rect)
 
 		for index, ability in enumerate(monster.get_abilities()):
@@ -205,12 +208,12 @@ class MonsterIndex:
 			text_surf = self.fonts['regular'].render(ability, False, COLORS['black'])
 			x = ability_rect.left + index % 2 * ability_rect.width / 2
 			y = 20 + ability_rect.top + int(index / 2) * (text_surf.get_height() + 20)
-			rect = text_surf.get_frect(topleft = (x,y))
+			rect = text_surf.get_rect(topleft = (x,y))
 			pygame.draw.rect(self.display_surface, COLORS[element], rect.inflate(10,10), 0, 4)
 			self.display_surface.blit(text_surf, rect)
 
-	def update(self, dt):
-		self.input()
+	def update(self, dt, keys_just_pressed):
+		self.input(keys_just_pressed)
 		self.display_surface.blit(self.tint_surf, (0,0))
 		self.display_list() 
 		self.display_main(dt)

@@ -33,7 +33,7 @@ class Evolution:
 		self.frame_index += 20 * dt
 		if self.frame_index < len(self.star_frames):
 			frame = self.star_frames[int(self.frame_index)]
-			rect = frame.get_frect(center = (WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2))
+			rect = frame.get_rect(center = (WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2))
 			self.display_surface.blit(frame, rect)
 
 	def update(self, dt):
@@ -43,22 +43,22 @@ class Evolution:
 		if not self.timers['start'].active:
 			self.display_surface.blit(self.tint_surf, (0,0))
 			if self.tint_amount < 255:
-				rect = self.start_monster_surf.get_frect(center = (WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2))
+				rect = self.start_monster_surf.get_rect(center = (WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2))
 				self.display_surface.blit(self.start_monster_surf, rect)
 
 				self.tint_amount += self.tint_speed * dt
 				self.start_monster_surf_white.set_alpha(self.tint_amount)
 				self.display_surface.blit(self.start_monster_surf_white, rect)
 
-				text_rect = self.start_text_surf.get_frect(midtop = rect.midbottom + vector(0,20))
+				text_rect = self.start_text_surf.get_rect(midtop = rect.midbottom + vector(0,20))
 				pygame.draw.rect(self.display_surface, COLORS['white'], text_rect.inflate(20,20), 0, 5)
 				self.display_surface.blit(self.start_text_surf, text_rect)
 
 			else:
-				rect = self.end_monster_surf.get_frect(center = (WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2))
+				rect = self.end_monster_surf.get_rect(center = (WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2))
 				self.display_surface.blit(self.end_monster_surf, rect)
 				
-				text_rect = self.end_text_surf.get_frect(midtop = rect.midbottom + vector(0,20))
+				text_rect = self.end_text_surf.get_rect(midtop = rect.midbottom + vector(0,20))
 				pygame.draw.rect(self.display_surface, COLORS['white'], text_rect.inflate(20,20), 0, 5)
 				self.display_surface.blit(self.end_text_surf, text_rect)
 				self.display_stars(dt)

@@ -8,7 +8,7 @@ class Sprite(pygame.sprite.Sprite):
 	def __init__(self, pos, surf, groups, z = WORLD_LAYERS['main']):
 		super().__init__(groups)
 		self.image = surf 
-		self.rect = self.image.get_frect(topleft = pos)
+		self.rect = self.image.get_rect(topleft = pos)
 		self.z = z
 		self.y_sort = self.rect.centery
 		self.hitbox = self.rect.copy()
@@ -50,6 +50,25 @@ class AnimatedSprite(Sprite):
 	def update(self, dt):
 		self.animate(dt)
 
+class CollectibleSprite(Sprite):
+	def __init__(self, pos, item_type, groups):
+		# Create a simple colored box for the collectible
+		self.item_type = item_type  # 'gift', 'flowers', or 'cake'
+		
+		# Different colors for different items
+		colors = {
+			'gift': (255, 215, 0),      # Gold
+			'flowers': (255, 105, 180),  # Pink
+			'cake': (255, 182, 193)      # Light pink
+		}
+		
+		surf = pygame.Surface((32, 32))
+		surf.fill(colors.get(item_type, (255, 255, 255)))
+		pygame.draw.rect(surf, (0, 0, 0), surf.get_rect(), 2)
+		
+		super().__init__(pos, surf, groups, WORLD_LAYERS['main'])
+		self.collected = False
+
 # battle sprites 
 class MonsterSprite(pygame.sprite.Sprite):
 	def __init__(self, pos, frames, groups, monster, index, pos_index, entity, apply_attack, create_monster):
@@ -70,7 +89,7 @@ class MonsterSprite(pygame.sprite.Sprite):
 		# sprite setup
 		super().__init__(groups)
 		self.image = self.frames[self.state][self.frame_index]
-		self.rect = self.image.get_frect(center = pos)
+		self.rect = self.image.get_rect(center = pos)
 
 		# timers 
 		self.timers = {
@@ -128,7 +147,7 @@ class MonsterOutlineSprite(pygame.sprite.Sprite):
 		self.frames = frames
 
 		self.image = self.frames[self.monster_sprite.state][self.monster_sprite.frame_index]
-		self.rect = self.image.get_frect(center = self.monster_sprite.rect.center)
+		self.rect = self.image.get_rect(center = self.monster_sprite.rect.center)
 
 	def update(self, _):
 		self.image = self.frames[self.monster_sprite.state][self.monster_sprite.adjusted_frame_index]
@@ -147,7 +166,7 @@ class MonsterNameSprite(pygame.sprite.Sprite):
 		self.image = pygame.Surface((text_surf.get_width() + 2 * padding, text_surf.get_height() + 2 * padding)) 
 		self.image.fill(COLORS['white'])
 		self.image.blit(text_surf, (padding, padding))
-		self.rect = self.image.get_frect(midtop = pos)
+		self.rect = self.image.get_rect(midtop = pos)
 
 	def update(self, _):
 		if not self.monster_sprite.groups():
@@ -161,14 +180,14 @@ class MonsterLevelSprite(pygame.sprite.Sprite):
 		self.z = BATTLE_LAYERS['name']
 
 		self.image = pygame.Surface((60,26))
-		self.rect = self.image.get_frect(topleft = pos) if entity == 'player' else self.image.get_frect(topright = pos)
-		self.xp_rect = pygame.FRect(0,self.rect.height - 2,self.rect.width,2)
+		self.rect = self.image.get_rect(topleft = pos) if entity == 'player' else self.image.get_rect(topright = pos)
+		self.xp_rect = pygame.Rect(0,self.rect.height - 2,self.rect.width,2)
 
 	def update(self, _):
 		self.image.fill(COLORS['white'])
 
 		text_surf = self.font.render(f'Lvl {self.monster_sprite.monster.level}', False, COLORS['black'])
-		text_rect = text_surf.get_frect(center = (self.rect.width / 2, self.rect.height / 2))
+		text_rect = text_surf.get_rect(center = (self.rect.width / 2, self.rect.height / 2))
 		self.image.blit(text_surf, text_rect)
 
 		draw_bar(self.image, self.xp_rect, self.monster_sprite.monster.xp, self.monster_sprite.monster.level_up, COLORS['black'], COLORS['white'], 0)
@@ -181,7 +200,7 @@ class MonsterStatsSprite(pygame.sprite.Sprite):
 		super().__init__(groups)
 		self.monster_sprite = monster_sprite
 		self.image = pygame.Surface(size) 
-		self.rect = self.image.get_frect(midbottom = pos)
+		self.rect = self.image.get_rect(midbottom = pos)
 		self.font = font
 		self.z = BATTLE_LAYERS['overlay']
 
@@ -192,13 +211,13 @@ class MonsterStatsSprite(pygame.sprite.Sprite):
 			color = (COLORS['red'], COLORS['blue'], COLORS['gray'])[index]
 			if index < 2: # health and energy 
 				text_surf = self.font.render(f'{int(value)}/{max_value}', False, COLORS['black'])
-				text_rect = text_surf.get_frect(topleft = (self.rect.width * 0.05,index * self.rect.height / 2))
-				bar_rect = pygame.FRect(text_rect.bottomleft + vector(0,-2), (self.rect.width * 0.9, 4))
+				text_rect = text_surf.get_rect(topleft = (self.rect.width * 0.05,index * self.rect.height / 2))
+				bar_rect = pygame.Rect(text_rect.bottomleft + vector(0,-2), (self.rect.width * 0.9, 4))
 
 				self.image.blit(text_surf, text_rect)
 				draw_bar(self.image, bar_rect, value, max_value, color, COLORS['black'], 2)
 			else: # initiative
-				init_rect = pygame.FRect((0, self.rect.height - 2), (self.rect.width, 2)) 
+				init_rect = pygame.Rect((0, self.rect.height - 2), (self.rect.width, 2)) 
 				draw_bar(self.image, init_rect, value, max_value, color, COLORS['white'], 0)
 
 		if not self.monster_sprite.groups():

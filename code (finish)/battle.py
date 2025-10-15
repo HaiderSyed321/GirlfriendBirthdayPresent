@@ -54,7 +54,7 @@ class Battle:
 			for i in range(len(self.opponent_sprites)):
 				del self.monster_data['opponent'][i]
 
-	def create_monster(self, monster, index, pos_index, entity):
+		def create_monster(self, monster, index, pos_index, entity):
 		monster.paused = False
 		frames = self.monster_frames['monsters'][monster.name]
 		outline_frames = self.monster_frames['outlines'][monster.name]
@@ -77,21 +77,19 @@ class Battle:
 		MonsterLevelSprite(entity, level_pos, monster_sprite, self.battle_sprites, self.fonts['small'])
 		MonsterStatsSprite(monster_sprite.rect.midbottom + vector(0,20), monster_sprite, (150,48), self.battle_sprites, self.fonts['small'])
 
-	def input(self):
+	def input(self, keys_just_pressed):
 		if self.selection_mode and self.current_monster:
-			keys = pygame.key.get_just_pressed()
-
 			match self.selection_mode:
 				case 'general': limiter = len(BATTLE_CHOICES['full'])
 				case 'attacks': limiter = len(self.current_monster.monster.get_abilities(all = False))
-				case 'switch': limiter = len(self.available_monsters)
+				case 'switch': limiter = max(1, len(self.available_monsters))
 				case 'target': limiter = len(self.opponent_sprites) if self.selection_side == 'opponent' else len(self.player_sprites)
 
-			if keys[pygame.K_DOWN]:
+			if pygame.K_DOWN in keys_just_pressed:
 				self.indexes[self.selection_mode] = (self.indexes[self.selection_mode] + 1) % limiter
-			if keys[pygame.K_UP]:
+			if pygame.K_UP in keys_just_pressed:
 				self.indexes[self.selection_mode] = (self.indexes[self.selection_mode] - 1) % limiter
-			if keys[pygame.K_SPACE]:
+			if pygame.K_SPACE in keys_just_pressed:
 				
 				if self.selection_mode == 'switch':
 					index, new_monster = list(self.available_monsters.items())[self.indexes['switch']]
@@ -139,7 +137,7 @@ class Battle:
 						self.selection_side = 'opponent'
 				self.indexes = {k: 0 for k in self.indexes}
 
-			if keys[pygame.K_ESCAPE]:
+			if pygame.K_ESCAPE in keys_just_pressed:
 				if self.selection_mode in ('attacks', 'switch', 'target'):
 					self.selection_mode = 'general'
 
@@ -254,7 +252,7 @@ class Battle:
 				surf = self.monster_frames['ui'][f"{data_dict['icon']}_highlight"]
 			else:
 				surf = pygame.transform.grayscale(self.monster_frames['ui'][data_dict['icon']])
-			rect = surf.get_frect(center = self.current_monster.rect.midright + data_dict['pos'])
+			rect = surf.get_rect(center = self.current_monster.rect.midright + data_dict['pos'])
 			self.display_surface.blit(surf, rect)
 
 	def draw_attacks(self):
@@ -266,7 +264,8 @@ class Battle:
 		v_offset = 0 if self.indexes['attacks'] < visible_attacks else -(self.indexes['attacks'] - visible_attacks + 1) * item_height
 
 		# bg
-		bg_rect = pygame.FRect((0,0), (width,height)).move_to(midleft = self.current_monster.rect.midright + vector(20,0))
+		bg_rect = pygame.Rect((0,0), (width,height))
+		bg_rect.midleft = self.current_monster.rect.midright + vector(20,0)
 		pygame.draw.rect(self.display_surface, COLORS['white'], bg_rect, 0, 5)
 
 		for index, ability in enumerate(abilities):
@@ -281,8 +280,9 @@ class Battle:
 			text_surf  = self.fonts['regular'].render(ability, False, text_color)
 
 			# rect 
-			text_rect = text_surf.get_frect(center = bg_rect.midtop + vector(0, item_height / 2 + index * item_height + v_offset))
-			text_bg_rect = pygame.FRect((0,0), (width, item_height)).move_to(center = text_rect.center)
+			text_rect = text_surf.get_rect(center = bg_rect.midtop + vector(0, item_height / 2 + index * item_height + v_offset))
+			text_bg_rect = pygame.Rect((0,0), (width, item_height))
+			text_bg_rect.center = text_rect.center
 
 			# draw
 			if bg_rect.collidepoint(text_rect.center):
@@ -302,7 +302,8 @@ class Battle:
 		visible_monsters = 4
 		item_height = height / visible_monsters
 		v_offset = 0 if self.indexes['switch'] < visible_monsters else -(self.indexes['switch'] - visible_monsters + 1) * item_height
-		bg_rect = pygame.FRect((0,0), (width, height)).move_to(midleft = self.current_monster.rect.midright + vector(20,0))
+		bg_rect = pygame.Rect((0,0), (width, height))
+		bg_rect.midleft = self.current_monster.rect.midright + vector(20,0)
 		pygame.draw.rect(self.display_surface, COLORS['white'], bg_rect, 0, 5)
 
 		# monsters 
@@ -311,12 +312,13 @@ class Battle:
 
 		for index, monster in enumerate(self.available_monsters.values()):
 			selected = index == self.indexes['switch']
-			item_bg_rect = pygame.FRect((0,0), (width, item_height)).move_to(midleft = (bg_rect.left, bg_rect.top + item_height / 2 + index * item_height + v_offset))
+			item_bg_rect = pygame.Rect((0,0), (width, item_height))
+			item_bg_rect.midleft = (bg_rect.left, bg_rect.top + item_height / 2 + index * item_height + v_offset)
 
 			icon_surf = self.monster_frames['icons'][monster.name]
-			icon_rect = icon_surf.get_frect(midleft = bg_rect.topleft + vector(10,item_height / 2 + index * item_height + v_offset))
+			icon_rect = icon_surf.get_rect(midleft = bg_rect.topleft + vector(10,item_height / 2 + index * item_height + v_offset))
 			text_surf = self.fonts['regular'].render(f'{monster.name} ({monster.level})', False, COLORS['red'] if selected else COLORS['black'])
-			text_rect = text_surf.get_frect(topleft = (bg_rect.left + 90, icon_rect.top))
+			text_rect = text_surf.get_rect(topleft = (bg_rect.left + 90, icon_rect.top))
 
 			# selection bg
 			if selected:
@@ -330,16 +332,16 @@ class Battle:
 			if bg_rect.collidepoint(item_bg_rect.center):
 				for surf, rect in ((icon_surf, icon_rect), (text_surf, text_rect)):
 					self.display_surface.blit(surf, rect)
-				health_rect = pygame.FRect((text_rect.bottomleft + vector(0,4)), (100,4))
-				energy_rect = pygame.FRect((health_rect.bottomleft + vector(0,2)), (80,4))
+				health_rect = pygame.Rect((text_rect.bottomleft + vector(0,4)), (100,4))
+				energy_rect = pygame.Rect((health_rect.bottomleft + vector(0,2)), (80,4))
 				draw_bar(self.display_surface, health_rect, monster.health, monster.get_stat('max_health'), COLORS['red'], COLORS['black'])
 				draw_bar(self.display_surface, energy_rect, monster.energy, monster.get_stat('max_energy'), COLORS['blue'], COLORS['black'])
 
-	def update(self, dt):
+	def update(self, dt, keys_just_pressed):
 		self.check_end_battle()
 		
 		# updates
-		self.input()
+		self.input(keys_just_pressed)
 		self.update_timers()
 		self.battle_sprites.update(dt)
 		self.check_active()

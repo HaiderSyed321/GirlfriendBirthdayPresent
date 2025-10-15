@@ -7,6 +7,11 @@ TILE_SIZE = 64
 ANIMATION_SPEED = 6
 BATTLE_OUTLINE_WIDTH = 4
 
+# Birthday Game Settings
+GAME_START_TIME = 18 * 60  # 6:00 PM in minutes (18:00)
+GAME_END_TIME = 24 * 60    # 12:00 AM in minutes (24:00 / 00:00)
+GAME_DURATION = GAME_END_TIME - GAME_START_TIME  # 6 hours = 360 minutes
+
 COLORS = {
 	'white': '#f4fefa', 
 	'pure white': '#ffffff',
@@ -22,7 +27,9 @@ COLORS = {
 	'red': '#f03131',
 	'blue': '#66d7ee',
 	'normal': '#ffffff',
-	'dark white': '#f0f0f0'
+	'dark white': '#f0f0f0',
+	'green': '#00ff00',
+	'dark gray': '#555555'
 }
 
 WORLD_LAYERS = {

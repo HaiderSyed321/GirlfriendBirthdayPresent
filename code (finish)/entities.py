@@ -20,7 +20,7 @@ class Entity(pygame.sprite.Sprite):
 
 		# sprite setup
 		self.image = self.frames[self.get_state()][self.frame_index]
-		self.rect = self.image.get_frect(center = pos)
+		self.rect = self.image.get_rect(center = pos)
 		self.hitbox = self.rect.inflate(-self.rect.width / 2, -60)
 
 		self.y_sort = self.rect.centery
@@ -80,7 +80,47 @@ class Character(Entity):
 			self.facing_direction = choice(self.view_directions)
 
 	def get_dialog(self):
+		# Check if this is the party NPC (Haider)
+		if self.character_data.get('is_party_npc', False):
+			return self.get_party_ending_dialog()
+		
+		# Check for pre-quest dialog (before quest starts)
+		game = getattr(self.player, 'game', None)
+		if game and not game.quest_started and 'before_quest' in self.character_data['dialog']:
+			return self.character_data['dialog']['before_quest']
+		
 		return self.character_data['dialog'][f"{'defeated' if self.character_data['defeated'] else 'default'}"]
+	
+	def get_party_ending_dialog(self):
+		"""Determine which ending dialog to show based on time and items"""
+		from main import Game
+		# Get reference to game instance through player
+		game = getattr(self.player, 'game', None)
+		
+		if not game:
+			return self.character_data['dialog']['default']
+		
+		# Check if all items are collected
+		all_items_collected = all(game.collected_items.values())
+		
+		if not all_items_collected:
+			return self.character_data['dialog']['incomplete']
+		
+		# Check time remaining
+		time_remaining = game.get_time_remaining()
+		
+		# Perfect ending: more than 1 hour early (60 minutes)
+		if time_remaining > 60:
+			return self.character_data['dialog']['perfect']
+		# Good ending: made it on time (0-60 minutes)
+		elif time_remaining >= 0:
+			return self.character_data['dialog']['good']
+		# Late ending: within 30 minutes late
+		elif time_remaining >= -30:
+			return self.character_data['dialog']['late']
+		# Too late: more than 30 minutes late
+		else:
+			return self.character_data['dialog']['too_late']
 
 	def raycast(self):
 		if check_connections(self.radius, self, self.player) and self.has_los() and not self.has_moved and not self.has_noticed:
