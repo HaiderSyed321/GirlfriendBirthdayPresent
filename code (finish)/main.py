@@ -662,13 +662,8 @@ class Game:
 					monster.defending = False
 					monster.paused = False
 			
-			# For birthday game: limit to 1v1 battles
-			if self.quest_started and hasattr(character, 'monsters') and character.monsters:
-				# Take only first monster from each side
-				player_first = {0: list(self.player_monsters.values())[0]}
-				opponent_first = {0: list(character.monsters.values())[0]}
-			elif hasattr(character, 'monsters') and character.monsters:
-				# Normal battles for non-quest NPCs
+			# Allow switching monsters: pass the full player roster; opponent as defined
+			if hasattr(character, 'monsters') and character.monsters:
 				player_first = self.player_monsters
 				opponent_first = character.monsters
 			else:
