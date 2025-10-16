@@ -3,6 +3,7 @@ from game_data import *
 from birthday_data import BIRTHDAY_STORY_DATA
 from pytmx.util_pygame import load_pygame
 from os.path import join
+import os
 from random import randint
 import json
 
@@ -114,6 +115,8 @@ class Game:
 		self.quiz = None
 		self.evolution = None
 		self.show_final_message = False
+		self.final_message_open_time = 0
+		self.final_photo = None
 		self.show_final_message = False
 
 
@@ -144,6 +147,14 @@ class Game:
 		self.start_animation_frames = import_folder('..', 'graphics', 'other', 'star animation')
 	
 		self.audio = audio_importer('..', 'audio')
+
+		# Try to load optional final photo (HaiderEman.JPG) if present
+		try:
+			photo_path = join('..', 'HaiderEman.JPG')
+			if os.path.exists(photo_path):
+				self.final_photo = pygame.image.load(photo_path).convert()
+		except Exception:
+			self.final_photo = None
 	
 	def format_time(self, minutes):
 		"""Convert minutes to 12-hour format string"""
@@ -634,6 +645,7 @@ class Game:
 		# Final party ending: after talking to Haider at WATER with all items
 		if hasattr(character, 'character_data') and character.character_data.get('is_party_npc', False) and self.current_map == 'water' and self.has_all_party_items():
 			self.show_final_message = True
+			self.final_message_open_time = pygame.time.get_ticks()
 			self.player.block()
 			return
 		
@@ -815,13 +827,27 @@ class Game:
 			text_rect = text.get_rect(center = (box_width // 2, y))
 			message_box.blit(text, text_rect)
 			y += 36
+
+		# Optional photo render (scaled to fit under text)
+		if self.final_photo:
+			available_w = box_width - 80
+			available_h = 180
+			photo = self.final_photo
+			# scale keeping aspect ratio
+			ratio = min(available_w / photo.get_width(), available_h / photo.get_height())
+			scaled = pygame.transform.smoothscale(photo, (int(photo.get_width() * ratio), int(photo.get_height() * ratio)))
+
+			scaled_rect = scaled.get_rect(center = (box_width // 2, box_height - 90))
+			message_box.blit(scaled, scaled_rect)
 		# Close hint
 		close = self.fonts['small'].render("Press SPACE to continue", False, COLORS['red'])
 		close_rect = close.get_rect(center = (box_width // 2, box_height - 40))
 		message_box.blit(close, close_rect)
 		self.display_surface.blit(message_box, (box_x, box_y))
 		# Input to dismiss
-		if pygame.K_SPACE in self.keys_just_pressed:
+		# Avoid immediate dismissal if SPACE closed the dialog right before opening
+		elapsed = pygame.time.get_ticks() - self.final_message_open_time
+		if elapsed >= 400 and pygame.K_SPACE in self.keys_just_pressed:
 			self.show_final_message = False
 			self.player.unblock()
 	
